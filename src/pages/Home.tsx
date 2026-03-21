@@ -3,6 +3,7 @@ import { useReviews } from '../hooks/useReviews'
 import Layout from '../components/Layout'
 import ListView from '../components/ListView'
 import MapView from '../components/MapView'
+import GalleryView from '../components/gallery/GalleryView'
 import ReviewFormModal from '../components/ReviewFormModal'
 import type { AuthState } from '../hooks/useAuth'
 
@@ -10,7 +11,7 @@ type HomeProps = { auth: AuthState }
 
 export default function Home({ auth }: HomeProps) {
   const reviews = useReviews()
-  const [view, setView] = useState<'list' | 'map'>('list')
+  const [view, setView] = useState<'list' | 'map' | 'gallery'>('list')
   const [showAddModal, setShowAddModal] = useState(false)
 
   return (
@@ -20,7 +21,7 @@ export default function Home({ auth }: HomeProps) {
       onViewChange={setView}
       onAddReview={() => setShowAddModal(true)}
     >
-      {view === 'list' ? (
+      {view === 'list' && (
         <ListView
           shops={reviews.shops}
           loading={reviews.loading}
@@ -30,7 +31,8 @@ export default function Home({ auth }: HomeProps) {
           onUpdate={reviews.updateReview}
           onDelete={reviews.deleteReview}
         />
-      ) : (
+      )}
+      {view === 'map' && (
         <MapView
           shops={reviews.shops}
           loading={reviews.loading}
@@ -38,6 +40,12 @@ export default function Home({ auth }: HomeProps) {
           isAdmin={auth.isAdmin}
           onUpdate={reviews.updateReview}
           onDelete={reviews.deleteReview}
+        />
+      )}
+      {view === 'gallery' && (
+        <GalleryView
+          currentUserId={auth.user?.id ?? ''}
+          isAdmin={auth.isAdmin}
         />
       )}
 

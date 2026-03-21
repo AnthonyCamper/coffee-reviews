@@ -1,8 +1,7 @@
 import { ReactNode, useState } from 'react'
 import type { AuthState } from '../hooks/useAuth'
 
-
-type View = 'list' | 'map'
+type View = 'list' | 'map' | 'gallery'
 
 interface Props {
   auth: AuthState
@@ -11,6 +10,12 @@ interface Props {
   onAddReview: () => void
   children: ReactNode
 }
+
+const VIEWS: { key: View; label: string }[] = [
+  { key: 'list',    label: '☰ List'    },
+  { key: 'map',     label: '🗺 Map'    },
+  { key: 'gallery', label: '📷 Photos' },
+]
 
 export default function Layout({ auth, view, onViewChange, onAddReview, children }: Props) {
   const [profileOpen, setProfileOpen] = useState(false)
@@ -34,17 +39,17 @@ export default function Layout({ auth, view, onViewChange, onAddReview, children
 
           {/* View toggle */}
           <div className="flex items-center bg-cream-100 rounded-xl p-1 border border-cream-200">
-            {(['list', 'map'] as const).map((v) => (
+            {VIEWS.map(({ key, label }) => (
               <button
-                key={v}
-                onClick={() => onViewChange(v)}
+                key={key}
+                onClick={() => onViewChange(key)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                  view === v
+                  view === key
                     ? 'bg-white text-espresso-700 shadow-soft'
                     : 'text-espresso-400 hover:text-espresso-600'
                 }`}
               >
-                {v === 'list' ? '☰ List' : '🗺 Map'}
+                {label}
               </button>
             ))}
           </div>
