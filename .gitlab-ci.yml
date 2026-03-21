@@ -1,0 +1,50 @@
+# ─── GitLab Pages CI/CD ───────────────────────────────────────────────────────
+# Deploys the Vite + React app to GitLab Pages on every push to main.
+#
+# Environment variables to set in GitLab → Settings → CI/CD → Variables:
+#   VITE_SUPABASE_URL       → your Supabase project URL
+#   VITE_SUPABASE_ANON_KEY  → your Supabase anon/public key
+#
+# These are exposed at build time (VITE_ prefix) so they are baked into
+# the static bundle — do NOT store secret keys here, only the public anon key.
+
+image: node:20-alpine
+
+stages:
+  - build
+  - deploy
+
+cache:
+  key:
+    files:
+      - package.json
+  paths:
+    - node_modules/
+
+build:
+  stage: build
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+pages:
+  stage: deploy
+  script:
+    # GitLab Pages serves from the `public/` directory
+    - mv dist public
+    # SPA fallback — GitLab Pages supports a 404.html that mirrors index.html
+    - cp public/index.html public/404.html
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  environment:
+    name: production
+    url: https://$CI_PAGES_DOMAIN
