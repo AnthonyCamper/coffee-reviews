@@ -1,4 +1,4 @@
-# {{GIRLS_NAME}} Coffee Ratings
+# Talia's Coffee Ratings
 
 A private, mobile-first web app for rating coffee shops — built with Vite + React, Supabase, and Leaflet.
 
@@ -74,7 +74,7 @@ Open [http://localhost:5173](http://localhost:5173).
 
 ## Customising the site name
 
-The placeholder `{{GIRLS_NAME}}` appears in these places:
+The placeholder `Talia's` appears in these places:
 
 | File | What to change |
 |------|----------------|
@@ -84,7 +84,7 @@ The placeholder `{{GIRLS_NAME}}` appears in these places:
 | `supabase/migrations/001_initial_schema.sql` | Comment at the top |
 | `README.md` | This file |
 
-**Find and replace** `{{GIRLS_NAME}}` across the whole repo with the real name — for example: `Talia's`.
+**Find and replace** `Talia's` across the whole repo with the real name — for example: `Talia's`.
 
 ---
 
@@ -147,7 +147,7 @@ Never put secret/service role keys here.
 talias-coffee/
 ├── .env.example              ← Copy to .env.local, fill in values
 ├── .gitlab-ci.yml            ← GitLab Pages deployment pipeline
-├── index.html                ← App shell (contains {{GIRLS_NAME}})
+├── index.html                ← App shell (contains Talia's)
 ├── vite.config.ts
 ├── tailwind.config.ts
 ├── supabase/

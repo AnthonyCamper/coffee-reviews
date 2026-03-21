@@ -28,7 +28,7 @@ export default function Layout({ auth, view, onViewChange, onAddReview, children
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="text-xl">☕</span>
             <h1 className="font-display text-lg text-espresso-800 truncate leading-tight">
-              {{GIRLS_NAME}} Coffee
+              Talia's Coffee
             </h1>
           </div>
 

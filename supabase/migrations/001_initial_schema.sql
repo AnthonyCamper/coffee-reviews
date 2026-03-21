@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- {{GIRLS_NAME}} Coffee Ratings — Initial Schema
+-- Talia's Coffee Ratings — Initial Schema
 -- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New query)
 -- ═══════════════════════════════════════════════════════════════════════════
 
