@@ -1,5 +1,30 @@
+// ─── Auth types ───────────────────────────────────────────────────────────────
+
+export type UserStatus = 'pending' | 'approved' | 'rejected' | 'disabled'
+
+export type AuthStatus =
+  | 'loading'
+  | 'unauthenticated'
+  | 'pending'
+  | 'rejected'
+  | 'disabled'
+  | 'authorized'
+
 // ─── Database row types ────────────────────────────────────────────────────────
 
+export interface UserProfile {
+  id: string
+  email: string
+  full_name: string | null
+  display_name: string | null
+  avatar_url: string | null
+  status: UserStatus
+  is_admin: boolean
+  can_leave_reviews: boolean
+  created_at: string
+}
+
+/** @deprecated Use UserProfile instead */
 export interface Profile {
   id: string
   email: string
@@ -12,6 +37,10 @@ export interface ApprovedUser {
   email: string
   is_admin: boolean
   added_at: string
+}
+
+export interface SiteSettings {
+  is_public: boolean
 }
 
 export interface CoffeeShop {
@@ -117,7 +146,3 @@ export interface ReviewFormData {
   visited_at: string
   photos?: File[]
 }
-
-// ─── Auth context ─────────────────────────────────────────────────────────────
-
-export type AuthStatus = 'loading' | 'unauthenticated' | 'unauthorized' | 'authorized'
