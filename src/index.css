@@ -76,6 +76,11 @@
 .leaflet-container {
   background: #fdfaf7;
   font-family: 'Inter', system-ui, sans-serif;
+  /* Create a stacking context so Leaflet's internal z-indexes (200–700) are
+     contained within the map element and don't compete with the ShopPanel
+     (z-30) or the floating add-review button (z-30) at the root level. */
+  position: relative;
+  z-index: 0;
 }
 
 .leaflet-control-zoom {

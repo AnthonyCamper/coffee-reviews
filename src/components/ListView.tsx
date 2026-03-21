@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
 import StarRating from './ui/StarRating'
 import ReviewCard from './ReviewCard'
-import type { ShopWithReviews, Review } from '../lib/types'
+import PhotoGallery from './ui/PhotoGallery'
+import type { ShopWithReviews, Review, ReviewPhoto } from '../lib/types'
 
 type SortKey = 'name' | 'coffee' | 'vibe'
 
@@ -110,7 +111,7 @@ export default function ListView({ shops, loading, error, currentUserId, isAdmin
         <EmptyState />
       ) : (
         <div className="space-y-3">
-          {shopsWithReviews.map(({ shop, reviews, avg_coffee, avg_vibe }) => (
+          {shopsWithReviews.map(({ shop, reviews, avg_coffee, avg_vibe, photos }) => (
             <ShopCard
               key={shop.id}
               shopId={shop.id}
@@ -119,6 +120,7 @@ export default function ListView({ shops, loading, error, currentUserId, isAdmin
               reviews={reviews}
               avgCoffee={avg_coffee}
               avgVibe={avg_vibe}
+              photos={photos}
               expanded={expandedShop === shop.id}
               onToggle={() => setExpandedShop(expandedShop === shop.id ? null : shop.id)}
               currentUserId={currentUserId}
@@ -140,6 +142,7 @@ interface ShopCardProps {
   reviews: Review[]
   avgCoffee: number
   avgVibe: number
+  photos: ReviewPhoto[]
   expanded: boolean
   onToggle: () => void
   currentUserId: string
@@ -149,7 +152,7 @@ interface ShopCardProps {
 }
 
 function ShopCard({
-  name, address, reviews, avgCoffee, avgVibe,
+  name, address, reviews, avgCoffee, avgVibe, photos,
   expanded, onToggle, currentUserId, isAdmin, onUpdate, onDelete,
 }: ShopCardProps) {
   return (
@@ -181,44 +184,67 @@ function ShopCard({
           </div>
         </div>
 
-        {/* Reviewer avatars */}
-        <div className="flex -space-x-1.5 flex-shrink-0 mt-1">
-          {reviews.slice(0, 3).map((r, i) => (
-            <div
-              key={r.id}
-              className="w-6 h-6 rounded-full overflow-hidden ring-2 ring-white bg-cream-200 flex items-center justify-center"
-              style={{ zIndex: 3 - i }}
-            >
-              {r.reviewer_avatar ? (
-                <img src={r.reviewer_avatar} alt={r.reviewer_name ?? ''} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-xs font-semibold text-espresso-500">
-                  {(r.reviewer_name ?? r.reviewer_email ?? '?').charAt(0).toUpperCase()}
-                </span>
-              )}
+        {/* Cover photo thumbnail or reviewer avatars */}
+        <div className="flex-shrink-0 mt-1">
+          {photos.length > 0 ? (
+            <div className="w-14 h-14 rounded-xl overflow-hidden bg-cream-100">
+              <img
+                src={photos[0].url}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
             </div>
-          ))}
-          {reviews.length > 3 && (
-            <div className="w-6 h-6 rounded-full ring-2 ring-white bg-cream-300 flex items-center justify-center">
-              <span className="text-xs text-espresso-500 font-semibold">+{reviews.length - 3}</span>
+          ) : (
+            <div className="flex -space-x-1.5">
+              {reviews.slice(0, 3).map((r, i) => (
+                <div
+                  key={r.id}
+                  className="w-6 h-6 rounded-full overflow-hidden ring-2 ring-white bg-cream-200 flex items-center justify-center"
+                  style={{ zIndex: 3 - i }}
+                >
+                  {r.reviewer_avatar ? (
+                    <img src={r.reviewer_avatar} alt={r.reviewer_name ?? ''} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-semibold text-espresso-500">
+                      {(r.reviewer_name ?? r.reviewer_email ?? '?').charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              ))}
+              {reviews.length > 3 && (
+                <div className="w-6 h-6 rounded-full ring-2 ring-white bg-cream-300 flex items-center justify-center">
+                  <span className="text-xs text-espresso-500 font-semibold">+{reviews.length - 3}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
       </button>
 
-      {/* Expanded reviews */}
+      {/* Expanded content */}
       {expanded && (
-        <div className="border-t border-cream-100 px-5 divide-y divide-cream-100">
-          {reviews.map(review => (
-            <ReviewCard
-              key={review.id}
-              review={review}
-              currentUserId={currentUserId}
-              isAdmin={isAdmin}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-            />
-          ))}
+        <div className="border-t border-cream-100">
+          {/* Photo gallery */}
+          {photos.length > 0 && (
+            <div className="px-5 pt-4 pb-2">
+              <PhotoGallery photos={photos} />
+            </div>
+          )}
+
+          {/* Reviews */}
+          <div className="px-5 divide-y divide-cream-100">
+            {reviews.map(review => (
+              <ReviewCard
+                key={review.id}
+                review={review}
+                currentUserId={currentUserId}
+                isAdmin={isAdmin}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

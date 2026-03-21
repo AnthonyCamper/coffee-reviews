@@ -23,6 +23,15 @@ export interface CoffeeShop {
   created_at: string
 }
 
+export interface ReviewPhoto {
+  id: string
+  review_id: string
+  storage_path: string
+  url: string
+  display_order: number
+  created_at: string
+}
+
 export interface Review {
   id: string
   coffee_shop_id: string
@@ -37,6 +46,8 @@ export interface Review {
   reviewer_name: string | null
   reviewer_avatar: string | null
   reviewer_email: string | null
+  // Attached photos
+  photos?: ReviewPhoto[]
 }
 
 // ─── Composite view type used in the UI ───────────────────────────────────────
@@ -46,6 +57,7 @@ export interface ShopWithReviews {
   reviews: Review[]
   avg_coffee: number
   avg_vibe: number
+  photos: ReviewPhoto[]   // all photos across all reviews for this shop, newest first
 }
 
 // ─── Form types ───────────────────────────────────────────────────────────────
@@ -59,6 +71,7 @@ export interface ReviewFormData {
   vibe_rating: number
   note: string
   visited_at: string
+  photos?: File[]
 }
 
 // ─── Auth context ─────────────────────────────────────────────────────────────
