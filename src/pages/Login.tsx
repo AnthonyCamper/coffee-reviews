@@ -28,7 +28,7 @@ export default function Login({ onSignIn }: Props) {
             ☕
           </div>
           <h1 className="font-display text-3xl text-espresso-800 tracking-tight">
-            {{GIRLS_NAME}} Coffee
+            Talia's Coffee
           </h1>
           <p className="mt-2 text-sm text-espresso-400 text-center leading-relaxed">
             A private corner for rating the coffee shops we love.
@@ -63,7 +63,7 @@ export default function Login({ onSignIn }: Props) {
 
         {/* Footer */}
         <p className="mt-8 text-center text-xs text-espresso-300">
-          {{GIRLS_NAME}} Coffee Ratings
+          Talia's Coffee Ratings
         </p>
       </div>
     </div>
