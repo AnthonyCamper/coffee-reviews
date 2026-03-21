@@ -10,5 +10,5 @@ export default defineConfig({
   // Set base to '/' for GitLab Pages with a custom domain,
   // or '/repo-name/' if deploying to a project namespace.
   // Update this to match your GitLab Pages URL path.
-  base: '/',
+  base: '/coffee-reviews/',
 })
