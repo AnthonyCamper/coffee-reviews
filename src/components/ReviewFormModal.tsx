@@ -2,6 +2,8 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import Modal from './ui/Modal'
 import StarRating from './ui/StarRating'
+import BusinessAutocomplete from './ui/BusinessAutocomplete'
+import PhotoUpload from './ui/PhotoUpload'
 import type { ReviewFormData } from '../lib/types'
 
 interface Props {
@@ -20,9 +22,11 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
   const [vibeRating, setVibeRating] = useState(0)
   const [note, setNote] = useState('')
   const [visitedAt, setVisitedAt] = useState(today)
+  const [photos, setPhotos] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
-  const [geoLoading, setGeoLoading] = useState(false)
   const [step, setStep] = useState<1 | 2>(1)
+  const [showManual, setShowManual] = useState(false)
+  const [geoLoading, setGeoLoading] = useState(false)
 
   const geocodeAddress = async () => {
     if (!address.trim()) return
@@ -38,13 +42,20 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
         setLng(parseFloat(data[0].lon).toFixed(6))
         toast.success('Location found!')
       } else {
-        toast.error('Could not find that address — enter coordinates manually.')
+        toast.error('Could not find address — enter coordinates manually.')
       }
     } catch {
       toast.error('Geocoding failed — enter coordinates manually.')
     } finally {
       setGeoLoading(false)
     }
+  }
+
+  const handleAutocompleteSelect = (suggestion: { name: string; address: string; lat: string; lng: string }) => {
+    setShopName(suggestion.name)
+    setAddress(suggestion.address)
+    setLat(parseFloat(suggestion.lat).toFixed(6))
+    setLng(parseFloat(suggestion.lng).toFixed(6))
   }
 
   const handleNext = (e: React.FormEvent) => {
@@ -54,7 +65,7 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
       return
     }
     if (!lat || !lng) {
-      toast.error('Please add a location (use "Find" or enter coordinates).')
+      toast.error('Please add a location — select from suggestions or use Find.')
       return
     }
     setStep(2)
@@ -76,6 +87,7 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
       vibe_rating: vibeRating,
       note,
       visited_at: visitedAt,
+      photos,
     })
     setSubmitting(false)
     if (result.error) {
@@ -93,74 +105,98 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
             Step 1 of 2 — Shop details
           </p>
 
+          {/* Autocomplete search */}
           <div>
-            <label className="label" htmlFor="shop-name">Coffee Shop Name</label>
-            <input
-              id="shop-name"
-              type="text"
-              className="input"
+            <label className="label" htmlFor="shop-search">Search Coffee Shop</label>
+            <BusinessAutocomplete
+              id="shop-search"
               value={shopName}
-              onChange={e => setShopName(e.target.value)}
+              onChange={setShopName}
+              onSelect={handleAutocompleteSelect}
               placeholder="Proud Mary, Seven Seeds…"
-              required
-              autoFocus
             />
+            {lat && lng && (
+              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                <span>✓</span> Location set
+              </p>
+            )}
           </div>
 
-          <div>
-            <label className="label" htmlFor="address">Address</label>
-            <div className="flex gap-2">
-              <input
-                id="address"
-                type="text"
-                className="input flex-1"
-                value={address}
-                onChange={e => setAddress(e.target.value)}
-                placeholder="123 Coffee Lane, Melbourne"
-                required
-              />
+          {/* Manual fields — collapsed by default if autocomplete filled values */}
+          {!showManual && (lat || address) ? (
+            <div className="bg-cream-50 rounded-2xl px-4 py-3 space-y-0.5">
+              <p className="text-sm font-semibold text-espresso-700">{address}</p>
+              <p className="text-xs text-espresso-400">{lat}, {lng}</p>
               <button
                 type="button"
-                onClick={geocodeAddress}
-                disabled={geoLoading || !address.trim()}
-                className="btn-secondary px-3 py-3 text-xs whitespace-nowrap flex-shrink-0"
+                onClick={() => setShowManual(true)}
+                className="text-xs text-rose-400 hover:text-rose-500 mt-1 transition-colors"
               >
-                {geoLoading ? '…' : 'Find'}
+                Edit manually
               </button>
             </div>
-            <p className="text-xs text-espresso-300 mt-1">
-              Hit "Find" to auto-fill coordinates from the address.
-            </p>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="label" htmlFor="address">Address</label>
+                <div className="flex gap-2">
+                  <input
+                    id="address"
+                    type="text"
+                    className="input flex-1"
+                    value={address}
+                    onChange={e => setAddress(e.target.value)}
+                    placeholder="123 Coffee Lane, Melbourne"
+                  />
+                  <button
+                    type="button"
+                    onClick={geocodeAddress}
+                    disabled={geoLoading || !address.trim()}
+                    className="btn-secondary px-3 py-3 text-xs whitespace-nowrap flex-shrink-0"
+                  >
+                    {geoLoading ? '…' : 'Find'}
+                  </button>
+                </div>
+              </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label" htmlFor="lat">Latitude</label>
-              <input
-                id="lat"
-                type="number"
-                step="any"
-                className="input"
-                value={lat}
-                onChange={e => setLat(e.target.value)}
-                placeholder="-37.8136"
-                required
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label" htmlFor="lat">Latitude</label>
+                  <input
+                    id="lat"
+                    type="number"
+                    step="any"
+                    className="input"
+                    value={lat}
+                    onChange={e => setLat(e.target.value)}
+                    placeholder="-37.8136"
+                  />
+                </div>
+                <div>
+                  <label className="label" htmlFor="lng">Longitude</label>
+                  <input
+                    id="lng"
+                    type="number"
+                    step="any"
+                    className="input"
+                    value={lng}
+                    onChange={e => setLng(e.target.value)}
+                    placeholder="144.9631"
+                  />
+                </div>
+              </div>
+
+              {(address || lat) && (
+                <button
+                  type="button"
+                  onClick={() => setShowManual(false)}
+                  className="text-xs text-espresso-300 hover:text-espresso-500 transition-colors"
+                >
+                  Collapse
+                </button>
+              )}
             </div>
-            <div>
-              <label className="label" htmlFor="lng">Longitude</label>
-              <input
-                id="lng"
-                type="number"
-                step="any"
-                className="input"
-                value={lng}
-                onChange={e => setLng(e.target.value)}
-                placeholder="144.9631"
-                required
-              />
-            </div>
-          </div>
+          )}
 
           <div className="pt-1 pb-2">
             <button type="submit" className="btn-primary w-full">
@@ -232,6 +268,11 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
               max={today}
               required
             />
+          </div>
+
+          <div>
+            <label className="label">Photos (optional)</label>
+            <PhotoUpload files={photos} onChange={setPhotos} />
           </div>
 
           <div className="flex gap-3 pb-2">

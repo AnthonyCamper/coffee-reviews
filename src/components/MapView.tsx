@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { Map as LeafletMap, Marker } from 'leaflet'
 import StarRating from './ui/StarRating'
 import ReviewCard from './ReviewCard'
-import type { ShopWithReviews, Review } from '../lib/types'
+import { Lightbox } from './ui/PhotoGallery'
+import type { ShopWithReviews, Review, ReviewPhoto } from '../lib/types'
 
 interface Props {
   shops: ShopWithReviews[]
@@ -17,21 +18,48 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
   const mapRef = useRef<HTMLDivElement>(null)
   const leafletRef = useRef<LeafletMap | null>(null)
   const markersRef = useRef<Marker[]>([])
+  const [mapReady, setMapReady] = useState(false)
   const [selectedShop, setSelectedShop] = useState<ShopWithReviews | null>(null)
 
   const shopsWithReviews = shops.filter(s => s.reviews.length > 0)
 
+  // Keep a ref that always mirrors the latest shopsWithReviews so the map init
+  // effect can read it without needing it in its dependency array.
+  const shopsRef = useRef(shopsWithReviews)
+  useEffect(() => { shopsRef.current = shopsWithReviews })
+
+  // ── Map initialisation ───────────────────────────────────────────────────
+  // Runs once on mount. Signals readiness via setMapReady(true) so the
+  // markers effect can safely depend on that flag instead of the ref.
   useEffect(() => {
     if (!mapRef.current) return
 
-    // Dynamically import Leaflet to avoid SSR issues
     import('leaflet').then(L => {
-      if (leafletRef.current) return // already initialized
+      if (leafletRef.current) return // already initialised (StrictMode double-mount)
 
-      const defaultCenter: [number, number] = [-37.8136, 144.9631] // Melbourne default
+      // Derive a sensible initial centre from shops that are already loaded,
+      // or fall back to a neutral world view so we never hard-code Melbourne.
+      const current = shopsRef.current
+      let initialCenter: [number, number]
+      let initialZoom: number
+
+      if (current.length > 0) {
+        const lats = current.map(s => s.shop.lat)
+        const lngs = current.map(s => s.shop.lng)
+        initialCenter = [
+          lats.reduce((a, b) => a + b) / lats.length,
+          lngs.reduce((a, b) => a + b) / lngs.length,
+        ]
+        initialZoom = 13
+      } else {
+        // No shops yet — show the world; fitBounds will reposition once data arrives
+        initialCenter = [20, 0]
+        initialZoom = 2
+      }
+
       const map = L.map(mapRef.current!, {
-        center: defaultCenter,
-        zoom: 13,
+        center: initialCenter,
+        zoom: initialZoom,
         zoomControl: true,
       })
 
@@ -41,6 +69,8 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
       }).addTo(map)
 
       leafletRef.current = map
+      // Signal readiness — this triggers the markers effect via the dep array
+      setMapReady(true)
     })
 
     return () => {
@@ -51,24 +81,28 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
     }
   }, [])
 
-  // Update markers when shops change
+  // ── Markers ──────────────────────────────────────────────────────────────
+  // Depends on `mapReady` so it re-runs the moment Leaflet is initialised,
+  // even if shops were already loaded before the map mounted (the race that
+  // caused markers to silently disappear).
   useEffect(() => {
     if (!leafletRef.current) return
 
     import('leaflet').then(L => {
       const map = leafletRef.current!
 
-      // Remove old markers
+      // Remove stale markers
       markersRef.current.forEach(m => m.remove())
       markersRef.current = []
 
       const bounds: [number, number][] = []
 
       shopsWithReviews.forEach(shopData => {
-        const { shop, avg_coffee, avg_vibe } = shopData
+        const { shop, avg_coffee, avg_vibe, photos } = shopData
         bounds.push([shop.lat, shop.lng])
 
-        const icon = createPinIcon(L, avg_coffee, avg_vibe)
+        const coverPhoto = photos[0]?.url ?? null
+        const icon = createPinIcon(L, avg_coffee, avg_vibe, coverPhoto)
         const marker = L.marker([shop.lat, shop.lng], { icon })
           .addTo(map)
           .on('click', () => setSelectedShop(shopData))
@@ -81,21 +115,18 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
       }
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shopsWithReviews.length, shopsWithReviews.map(s => s.shop.id).join(',')])
+  }, [mapReady, shopsWithReviews.length, shopsWithReviews.map(s => s.shop.id).join(',')])
 
   return (
     <div className="relative h-[calc(100dvh-64px)]">
-      {/* Map container */}
       <div ref={mapRef} className="w-full h-full" />
 
-      {/* Loading overlay */}
       {loading && (
         <div className="absolute inset-0 bg-cream-50/60 flex items-center justify-center z-10">
           <div className="w-8 h-8 rounded-full border-2 border-rose-300 border-t-rose-400 animate-spin" />
         </div>
       )}
 
-      {/* Empty state */}
       {!loading && shopsWithReviews.length === 0 && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
           <div className="bg-white/90 backdrop-blur-sm rounded-3xl px-6 py-5 shadow-card text-center">
@@ -106,7 +137,6 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
         </div>
       )}
 
-      {/* Shop detail panel — slides up from bottom */}
       {selectedShop && (
         <ShopPanel
           shopData={selectedShop}
@@ -122,12 +152,31 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createPinIcon(L: any, avgCoffee: number, avgVibe: number) {
+function createPinIcon(L: any, avgCoffee: number, avgVibe: number, photoUrl: string | null) {
   const score = ((avgCoffee + avgVibe) / 2).toFixed(1)
+  // Only embed URLs that originate from our own storage (guard against injection)
+  const safePhoto = photoUrl && photoUrl.startsWith('https://') ? photoUrl : null
+  const thumbHtml = safePhoto ? `
+    <div style="
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      margin-bottom: 3px;
+      flex-shrink: 0;
+    ">
+      <img src="${safePhoto}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" />
+    </div>
+  ` : ''
+
+  const totalHeight = safePhoto ? 96 : 52
+
   return L.divIcon({
     className: '',
-    iconSize: [44, 52],
-    iconAnchor: [22, 52],
+    iconSize: [44, totalHeight],
+    iconAnchor: [22, totalHeight],
     html: `
       <div style="
         width:44px;
@@ -136,6 +185,7 @@ function createPinIcon(L: any, avgCoffee: number, avgVibe: number) {
         align-items:center;
         filter: drop-shadow(0 4px 8px rgba(154,122,92,0.3));
       ">
+        ${thumbHtml}
         <div style="
           background: white;
           border: 2px solid #fda4af;
@@ -170,7 +220,7 @@ interface ShopPanelProps {
 }
 
 function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDelete }: ShopPanelProps) {
-  const { shop, reviews, avg_coffee, avg_vibe } = shopData
+  const { shop, reviews, avg_coffee, avg_vibe, photos } = shopData
 
   return (
     <>
@@ -181,7 +231,7 @@ function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDele
       />
 
       {/* Panel */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 sm:left-auto sm:top-4 sm:right-4 sm:bottom-auto sm:w-80 bg-white rounded-t-3xl sm:rounded-3xl shadow-elevated animate-slide-up max-h-[60dvh] sm:max-h-[calc(100dvh-120px)] flex flex-col">
+      <div className="absolute bottom-0 left-0 right-0 z-30 sm:left-auto sm:top-4 sm:right-4 sm:bottom-auto sm:w-80 bg-white rounded-t-3xl sm:rounded-3xl shadow-elevated animate-slide-up max-h-[72dvh] sm:max-h-[calc(100dvh-120px)] flex flex-col">
         {/* Handle (mobile) */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden">
           <div className="w-8 h-1 rounded-full bg-cream-300" />
@@ -217,21 +267,59 @@ function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDele
           </button>
         </div>
 
-        {/* Reviews */}
-        <div className="overflow-y-auto px-5 pb-5 divide-y divide-cream-100">
-          {reviews.map((review: Review) => (
-            <ReviewCard
-              key={review.id}
-              review={review}
-              currentUserId={currentUserId}
-              isAdmin={isAdmin}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-              compact
-            />
-          ))}
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1">
+          {/* Photo strip */}
+          {photos.length > 0 && (
+            <div className="px-5 pt-4 pb-2">
+              <PhotoStrip photos={photos} />
+            </div>
+          )}
+
+          {/* Reviews */}
+          <div className="px-5 pb-5 divide-y divide-cream-100">
+            {reviews.map((review: Review) => (
+              <ReviewCard
+                key={review.id}
+                review={review}
+                currentUserId={currentUserId}
+                isAdmin={isAdmin}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+                compact
+              />
+            ))}
+          </div>
         </div>
       </div>
+    </>
+  )
+}
+
+function PhotoStrip({ photos }: { photos: ReviewPhoto[] }) {
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+
+  return (
+    <>
+      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+        {photos.map((photo, i) => (
+          <button
+            key={photo.id}
+            onClick={() => setLightboxIndex(i)}
+            className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-cream-100 hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-rose-300"
+          >
+            <img src={photo.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+          </button>
+        ))}
+      </div>
+
+      {lightboxIndex !== null && (
+        <Lightbox
+          photos={photos}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
     </>
   )
 }
