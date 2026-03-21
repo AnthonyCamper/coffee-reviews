@@ -60,6 +60,50 @@ export interface ShopWithReviews {
   photos: ReviewPhoto[]   // all photos across all reviews for this shop, newest first
 }
 
+// ─── Gallery / Social types ────────────────────────────────────────────────────
+
+export interface GalleryPhoto {
+  photo_id: string
+  photo_url: string
+  display_order: number
+  photo_created_at: string
+  review_id: string
+  coffee_rating: number
+  vibe_rating: number
+  note: string | null
+  visited_at: string
+  shop_id: string
+  shop_name: string
+  shop_address: string
+  reviewer_id: string
+  reviewer_name: string | null
+  reviewer_avatar: string | null
+  reviewer_email: string | null
+  like_count: number
+  comment_count: number
+  is_liked_by_me: boolean
+}
+
+export interface CommentReaction {
+  reaction_type: string
+  count: number
+  is_mine: boolean
+}
+
+export interface PhotoComment {
+  id: string
+  photo_id: string
+  user_id: string
+  text: string
+  created_at: string
+  commenter_name: string | null
+  commenter_avatar: string | null
+  commenter_email: string | null
+  like_count: number
+  is_liked_by_me: boolean
+  reactions: CommentReaction[]
+}
+
 // ─── Form types ───────────────────────────────────────────────────────────────
 
 export interface ReviewFormData {
