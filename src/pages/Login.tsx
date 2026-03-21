@@ -1,16 +1,35 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 interface Props {
-  onSignIn: () => Promise<void>
+  onSignInGoogle: () => Promise<void>
+  onSignInEmail: (email: string, password: string) => Promise<{ error: string | null }>
+  isPublic: boolean
+  onBrowse?: () => void
 }
 
-export default function Login({ onSignIn }: Props) {
-  const [loading, setLoading] = useState(false)
+export default function Login({ onSignInGoogle, onSignInEmail, isPublic, onBrowse }: Props) {
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSignIn = async () => {
-    setLoading(true)
-    await onSignIn()
-    // loading stays true during redirect
+  const handleGoogle = async () => {
+    setGoogleLoading(true)
+    await onSignInGoogle()
+  }
+
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email || !password) return
+    setError(null)
+    setEmailLoading(true)
+    const result = await onSignInEmail(email, password)
+    if (result.error) {
+      setError(result.error)
+      setEmailLoading(false)
+    }
   }
 
   return (
@@ -36,32 +55,92 @@ export default function Login({ onSignIn }: Props) {
         </div>
 
         {/* Sign-in card */}
-        <div className="card px-8 py-8">
-          <p className="text-center text-xs uppercase tracking-widest font-semibold text-espresso-400 mb-6">
+        <div className="card px-8 py-8 space-y-5">
+          <p className="text-center text-xs uppercase tracking-widest font-semibold text-espresso-400">
             Sign in to continue
           </p>
 
+          {/* Google */}
           <button
-            onClick={handleSignIn}
-            disabled={loading}
+            onClick={handleGoogle}
+            disabled={googleLoading || emailLoading}
             className="btn-primary w-full gap-3 py-3.5 text-base"
           >
-            {loading ? (
+            {googleLoading ? (
               <span className="w-5 h-5 rounded-full border-2 border-white border-t-rose-200 animate-spin" />
             ) : (
               <GoogleIcon />
             )}
-            {loading ? 'Redirecting…' : 'Continue with Google'}
+            {googleLoading ? 'Redirecting…' : 'Continue with Google'}
           </button>
 
-          <p className="mt-6 text-center text-xs text-espresso-300 leading-relaxed">
-            Access is by invitation only.
-            <br />
-            Contact Talia to be added.
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-cream-200" />
+            <span className="text-xs text-espresso-300 font-medium">or</span>
+            <div className="flex-1 h-px bg-cream-200" />
+          </div>
+
+          {/* Email / password */}
+          <form onSubmit={handleEmailSignIn} className="space-y-3">
+            <div>
+              <label className="label">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="input"
+                autoComplete="email"
+                disabled={emailLoading || googleLoading}
+              />
+            </div>
+            <div>
+              <label className="label">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="input"
+                autoComplete="current-password"
+                disabled={emailLoading || googleLoading}
+              />
+            </div>
+
+            {error && (
+              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={emailLoading || googleLoading || !email || !password}
+              className="btn-secondary w-full py-3"
+            >
+              {emailLoading ? (
+                <span className="w-4 h-4 rounded-full border-2 border-espresso-400 border-t-transparent animate-spin" />
+              ) : null}
+              {emailLoading ? 'Signing in…' : 'Sign in with email'}
+            </button>
+          </form>
+
+          <p className="text-center text-xs text-espresso-400">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-rose-500 font-semibold hover:underline">
+              Request access
+            </Link>
           </p>
+
+          {isPublic && onBrowse && (
+            <button
+              onClick={onBrowse}
+              className="w-full text-xs text-espresso-400 hover:text-espresso-600 transition-colors py-1"
+            >
+              Browse without signing in →
+            </button>
+          )}
         </div>
 
-        {/* Footer */}
         <p className="mt-8 text-center text-xs text-espresso-300">
           Talia's Coffee Ratings
         </p>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import { useReviews } from '../hooks/useReviews'
 import Layout from '../components/Layout'
 import ListView from '../components/ListView'
@@ -7,9 +8,9 @@ import GalleryView from '../components/gallery/GalleryView'
 import ReviewFormModal from '../components/ReviewFormModal'
 import type { AuthState } from '../hooks/useAuth'
 
-type HomeProps = { auth: AuthState }
+type HomeProps = { auth: AuthState; readOnly?: boolean }
 
-export default function Home({ auth }: HomeProps) {
+export default function Home({ auth, readOnly = false }: HomeProps) {
   const reviews = useReviews()
   const [view, setView] = useState<'list' | 'map' | 'gallery'>('list')
   const [showAddModal, setShowAddModal] = useState(false)
@@ -19,7 +20,14 @@ export default function Home({ auth }: HomeProps) {
       auth={auth}
       view={view}
       onViewChange={setView}
-      onAddReview={() => setShowAddModal(true)}
+      onAddReview={() => {
+          if (!auth.canLeaveReviews) {
+            toast.error("Talia hasn't enabled reviews for your account yet.")
+            return
+          }
+          setShowAddModal(true)
+        }}
+      readOnly={readOnly}
     >
       {view === 'list' && (
         <ListView

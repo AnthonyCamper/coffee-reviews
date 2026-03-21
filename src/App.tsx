@@ -3,12 +3,32 @@ import { Toaster } from 'react-hot-toast'
 import { useAuth } from './hooks/useAuth'
 import Login from './pages/Login'
 import Home from './pages/Home'
-import Unauthorized from './pages/Unauthorized'
+import Register from './pages/Register'
+import PendingApproval from './pages/PendingApproval'
+import AdminDashboard from './pages/AdminDashboard'
+
+function StatusScreen({ title, message, onSignOut }: { title: string; message: string; onSignOut: () => void }) {
+  return (
+    <div className="min-h-dvh bg-cream-50 flex flex-col items-center justify-center px-6 py-12">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-rose-100 opacity-40 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-cream-300 opacity-50 blur-3xl" />
+      </div>
+      <div className="relative w-full max-w-sm text-center animate-fade-in">
+        <div className="w-16 h-16 rounded-3xl bg-cream-200 flex items-center justify-center shadow-soft mb-5 text-3xl mx-auto">
+          ☕
+        </div>
+        <h2 className="font-display text-2xl text-espresso-800 mb-3">{title}</h2>
+        <p className="text-sm text-espresso-400 leading-relaxed mb-8">{message}</p>
+        <button onClick={onSignOut} className="btn-secondary">Sign out</button>
+      </div>
+    </div>
+  )
+}
 
 export default function App() {
   const auth = useAuth()
 
-  // Shared loading screen while checking auth state
   if (auth.status === 'loading') {
     return (
       <div className="min-h-dvh bg-cream-50 flex items-center justify-center">
@@ -19,6 +39,8 @@ export default function App() {
       </div>
     )
   }
+
+  const isPublic = auth.siteSettings?.is_public ?? false
 
   return (
     <>
@@ -44,18 +66,55 @@ export default function App() {
       />
 
       <Routes>
+        <Route path="/register" element={
+          auth.status === 'unauthenticated' ? (
+            <Register onSignUp={auth.signUpWithEmail} />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+
+        <Route path="/admin" element={
+          auth.status === 'authorized' && auth.isAdmin ? (
+            <AdminDashboard />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+
         <Route
           path="/"
           element={
             auth.status === 'unauthenticated' ? (
-              <Login onSignIn={auth.signInWithGoogle} />
-            ) : auth.status === 'unauthorized' ? (
-              <Unauthorized onSignOut={auth.signOut} email={auth.user?.email ?? ''} />
+              isPublic ? (
+                <Home auth={auth} readOnly />
+              ) : (
+                <Login
+                  onSignInGoogle={auth.signInWithGoogle}
+                  onSignInEmail={auth.signInWithEmail}
+                  isPublic={isPublic}
+                />
+              )
+            ) : auth.status === 'pending' ? (
+              <PendingApproval auth={auth} />
+            ) : auth.status === 'rejected' ? (
+              <StatusScreen
+                title="Access not approved"
+                onSignOut={auth.signOut}
+                message="Your access request was not approved. Contact Talia if you think this is a mistake."
+              />
+            ) : auth.status === 'disabled' ? (
+              <StatusScreen
+                title="Account disabled"
+                onSignOut={auth.signOut}
+                message="Your account has been disabled. Contact Talia for more information."
+              />
             ) : (
               <Home auth={auth} />
             )
           }
         />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
