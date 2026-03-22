@@ -121,18 +121,25 @@ export interface CommentReaction {
   is_mine: boolean
 }
 
+export type CommentContentType = 'text' | 'gif' | 'mixed'
+
 export interface PhotoComment {
   id: string
   photo_id: string
   user_id: string
-  text: string
+  text: string | null
   created_at: string
+  parent_comment_id: string | null
+  content_type: CommentContentType
+  media_url: string | null
   commenter_name: string | null
   commenter_avatar: string | null
   commenter_email: string | null
   like_count: number
   is_liked_by_me: boolean
+  reply_count: number
   reactions: CommentReaction[]
+  replies?: PhotoComment[]
 }
 
 // ─── Notification types ──────────────────────────────────────────────────────
