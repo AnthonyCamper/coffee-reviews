@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import StarRating from './ui/StarRating'
 import ReviewCard from './ReviewCard'
 import PhotoGallery from './ui/PhotoGallery'
+import PhotoModal from './gallery/PhotoModal'
+import { usePhotoDetail, fetchCommentCounts } from '../hooks/usePhotoDetail'
 import type { ShopWithReviews, Review, ReviewPhoto, ReviewUpdateData } from '../lib/types'
 
 type SortKey = 'name' | 'coffee' | 'vibe'
@@ -20,6 +22,17 @@ export default function ListView({ shops, loading, error, currentUserId, isAdmin
   const [sortBy, setSortBy] = useState<SortKey>('name')
   const [filterReviewer, setFilterReviewer] = useState<string>('all')
   const [expandedShop, setExpandedShop] = useState<string | null>(null)
+
+  const photoDetail = usePhotoDetail(currentUserId)
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+
+  // Fetch comment counts for all photos
+  useEffect(() => {
+    const allPhotoIds = shops.flatMap(s => s.photos.map(p => p.id))
+    if (allPhotoIds.length > 0) {
+      fetchCommentCounts(allPhotoIds).then(setCommentCounts)
+    }
+  }, [shops])
 
   // Collect all unique reviewers
   const reviewers = useMemo(() => {
@@ -71,67 +84,90 @@ export default function ListView({ shops, loading, error, currentUserId, isAdmin
   const shopsWithReviews = sorted.filter(s => s.reviews.length > 0)
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-4 pb-24">
-      {/* Controls */}
-      {shopsWithReviews.length > 0 && (
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          {/* Sort */}
-          <div className="flex items-center bg-cream-100 rounded-xl p-1 border border-cream-200 text-xs">
-            {([['name', 'Name'], ['coffee', '☕ Coffee'], ['vibe', '✨ Vibe']] as [SortKey, string][]).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setSortBy(key)}
-                className={`px-2.5 py-1.5 rounded-lg font-medium transition-all duration-150 ${
-                  sortBy === key ? 'bg-white text-espresso-700 shadow-soft' : 'text-espresso-400 hover:text-espresso-600'
-                }`}
+    <>
+      <div className="max-w-2xl mx-auto px-4 py-4 pb-24">
+        {/* Controls */}
+        {shopsWithReviews.length > 0 && (
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            {/* Sort */}
+            <div className="flex items-center bg-cream-100 rounded-xl p-1 border border-cream-200 text-xs">
+              {([['name', 'Name'], ['coffee', '☕ Coffee'], ['vibe', '✨ Vibe']] as [SortKey, string][]).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setSortBy(key)}
+                  className={`px-2.5 py-1.5 rounded-lg font-medium transition-all duration-150 ${
+                    sortBy === key ? 'bg-white text-espresso-700 shadow-soft' : 'text-espresso-400 hover:text-espresso-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Reviewer filter */}
+            {reviewers.length > 1 && (
+              <select
+                value={filterReviewer}
+                onChange={e => setFilterReviewer(e.target.value)}
+                className="text-xs rounded-xl border border-cream-200 bg-cream-100 px-3 py-2 text-espresso-600 focus:outline-none focus:ring-2 focus:ring-rose-300"
               >
-                {label}
-              </button>
+                <option value="all">All reviewers</option>
+                {reviewers.map(r => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
+
+        {/* Shop cards */}
+        {shopsWithReviews.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="space-y-3">
+            {shopsWithReviews.map(({ shop, reviews, avg_coffee, avg_vibe, photos }) => (
+              <ShopCard
+                key={shop.id}
+                shopId={shop.id}
+                name={shop.name}
+                address={shop.address}
+                reviews={reviews}
+                avgCoffee={avg_coffee}
+                avgVibe={avg_vibe}
+                photos={photos}
+                expanded={expandedShop === shop.id}
+                onToggle={() => setExpandedShop(expandedShop === shop.id ? null : shop.id)}
+                currentUserId={currentUserId}
+                isAdmin={isAdmin}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+                onPhotoOpen={photoDetail.open}
+                commentCounts={commentCounts}
+              />
             ))}
           </div>
+        )}
+      </div>
 
-          {/* Reviewer filter */}
-          {reviewers.length > 1 && (
-            <select
-              value={filterReviewer}
-              onChange={e => setFilterReviewer(e.target.value)}
-              className="text-xs rounded-xl border border-cream-200 bg-cream-100 px-3 py-2 text-espresso-600 focus:outline-none focus:ring-2 focus:ring-rose-300"
-            >
-              <option value="all">All reviewers</option>
-              {reviewers.map(r => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </select>
-          )}
+      {/* Photo detail loading overlay */}
+      {photoDetail.loading && (
+        <div className="fixed inset-0 z-[140] bg-black/40 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white border-t-transparent animate-spin" />
         </div>
       )}
 
-      {/* Shop cards */}
-      {shopsWithReviews.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="space-y-3">
-          {shopsWithReviews.map(({ shop, reviews, avg_coffee, avg_vibe, photos }) => (
-            <ShopCard
-              key={shop.id}
-              shopId={shop.id}
-              name={shop.name}
-              address={shop.address}
-              reviews={reviews}
-              avgCoffee={avg_coffee}
-              avgVibe={avg_vibe}
-              photos={photos}
-              expanded={expandedShop === shop.id}
-              onToggle={() => setExpandedShop(expandedShop === shop.id ? null : shop.id)}
-              currentUserId={currentUserId}
-              isAdmin={isAdmin}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-            />
-          ))}
-        </div>
+      {/* Photo detail modal */}
+      {photoDetail.photo && (
+        <PhotoModal
+          photo={photoDetail.photo}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          onClose={photoDetail.close}
+          onLike={photoDetail.toggleLike}
+          onCommentAdded={photoDetail.onCommentAdded}
+        />
       )}
-    </div>
+    </>
   )
 }
 
@@ -149,11 +185,14 @@ interface ShopCardProps {
   isAdmin: boolean
   onUpdate: Props['onUpdate']
   onDelete: Props['onDelete']
+  onPhotoOpen: (photoId: string) => void
+  commentCounts: Record<string, number>
 }
 
 function ShopCard({
   name, address, reviews, avgCoffee, avgVibe, photos,
   expanded, onToggle, currentUserId, isAdmin, onUpdate, onDelete,
+  onPhotoOpen, commentCounts,
 }: ShopCardProps) {
   return (
     <div className="card animate-slide-up">
@@ -228,7 +267,11 @@ function ShopCard({
           {/* Photo gallery */}
           {photos.length > 0 && (
             <div className="px-5 pt-4 pb-2">
-              <PhotoGallery photos={photos} />
+              <PhotoGallery
+                photos={photos}
+                onPhotoOpen={onPhotoOpen}
+                commentCounts={commentCounts}
+              />
             </div>
           )}
 

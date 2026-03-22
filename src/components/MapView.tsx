@@ -3,7 +3,9 @@ import type { Map as LeafletMap } from 'leaflet'
 import Supercluster from 'supercluster'
 import StarRating from './ui/StarRating'
 import ReviewCard from './ReviewCard'
+import PhotoModal from './gallery/PhotoModal'
 import { Lightbox } from './ui/PhotoGallery'
+import { usePhotoDetail, fetchCommentCounts } from '../hooks/usePhotoDetail'
 import type { ShopWithReviews, Review, ReviewPhoto, ReviewUpdateData } from '../lib/types'
 
 interface Props {
@@ -25,12 +27,24 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
   const [mapReady, setMapReady] = useState(false)
   const [selectedShop, setSelectedShop] = useState<ShopWithReviews | null>(null)
 
+  const photoDetail = usePhotoDetail(currentUserId)
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+
   const shopsWithReviews = shops.filter(s => s.reviews.length > 0)
 
   // Keep a ref that always mirrors the latest shopsWithReviews so the map init
   // effect can read it without needing it in its dependency array.
   const shopsRef = useRef(shopsWithReviews)
   useEffect(() => { shopsRef.current = shopsWithReviews })
+
+  // Fetch comment counts for all photos
+  useEffect(() => {
+    const allPhotoIds = shopsWithReviews.flatMap(s => s.photos.map(p => p.id))
+    if (allPhotoIds.length > 0) {
+      fetchCommentCounts(allPhotoIds).then(setCommentCounts)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopsWithReviews.map(s => s.shop.id).join(',')])
 
   // ── Map initialisation ───────────────────────────────────────────────────
   // Runs once on mount. Signals readiness via setMapReady(true) so the
@@ -217,6 +231,27 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
           isAdmin={isAdmin}
           onUpdate={onUpdate}
           onDelete={onDelete}
+          onPhotoOpen={photoDetail.open}
+          commentCounts={commentCounts}
+        />
+      )}
+
+      {/* Photo detail loading overlay */}
+      {photoDetail.loading && (
+        <div className="fixed inset-0 z-[140] bg-black/40 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white border-t-transparent animate-spin" />
+        </div>
+      )}
+
+      {/* Photo detail modal */}
+      {photoDetail.photo && (
+        <PhotoModal
+          photo={photoDetail.photo}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          onClose={photoDetail.close}
+          onLike={photoDetail.toggleLike}
+          onCommentAdded={photoDetail.onCommentAdded}
         />
       )}
     </div>
@@ -326,9 +361,11 @@ interface ShopPanelProps {
   isAdmin: boolean
   onUpdate: Props['onUpdate']
   onDelete: Props['onDelete']
+  onPhotoOpen: (photoId: string) => void
+  commentCounts: Record<string, number>
 }
 
-function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDelete }: ShopPanelProps) {
+function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDelete, onPhotoOpen, commentCounts }: ShopPanelProps) {
   const { shop, reviews, avg_coffee, avg_vibe, photos } = shopData
 
   return (
@@ -381,7 +418,7 @@ function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDele
           {/* Photo strip */}
           {photos.length > 0 && (
             <div className="px-5 pt-4 pb-2">
-              <PhotoStrip photos={photos} />
+              <PhotoStrip photos={photos} onPhotoOpen={onPhotoOpen} commentCounts={commentCounts} />
             </div>
           )}
 
@@ -405,21 +442,38 @@ function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDele
   )
 }
 
-function PhotoStrip({ photos }: { photos: ReviewPhoto[] }) {
+interface PhotoStripProps {
+  photos: ReviewPhoto[]
+  onPhotoOpen: (photoId: string) => void
+  commentCounts: Record<string, number>
+}
+
+function PhotoStrip({ photos, onPhotoOpen, commentCounts }: PhotoStripProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   return (
     <>
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        {photos.map((photo, i) => (
-          <button
-            key={photo.id}
-            onClick={() => setLightboxIndex(i)}
-            className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-cream-100 hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-rose-300"
-          >
-            <img src={photo.url} alt="" className="w-full h-full object-cover" loading="lazy" />
-          </button>
-        ))}
+        {photos.map((photo) => {
+          const count = commentCounts[photo.id] ?? 0
+          return (
+            <button
+              key={photo.id}
+              onClick={() => onPhotoOpen(photo.id)}
+              className="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-cream-100 hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-rose-300"
+            >
+              <img src={photo.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+              {count > 0 && (
+                <div className="absolute top-1 left-1 flex items-center gap-0.5 bg-black/40 backdrop-blur-sm rounded-full px-1 py-0.5">
+                  <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span className="text-white text-[9px] font-medium">{count}</span>
+                </div>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {lightboxIndex !== null && (
