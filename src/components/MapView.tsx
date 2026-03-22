@@ -167,8 +167,14 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
 
       // Initial render then fit all shops into view
       render()
-      const allBounds = shopsWithReviews.map(s => [s.shop.lat, s.shop.lng]) as [number, number][]
-      map.fitBounds(allBounds as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 15 })
+      if (shopsWithReviews.length === 1) {
+        // Single point — setView avoids degenerate zero-area bounds from fitBounds
+        const s = shopsWithReviews[0]
+        map.setView([s.shop.lat, s.shop.lng], 15)
+      } else {
+        const allBounds = shopsWithReviews.map(s => [s.shop.lat, s.shop.lng]) as [number, number][]
+        map.fitBounds(allBounds as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 15 })
+      }
     })
 
     return () => {
@@ -246,9 +252,11 @@ function createPinIcon(L: any, avgCoffee: number, avgVibe: number, photoUrl: str
     html: `
       <div style="
         width:44px;
+        height:${totalHeight}px;
         display:flex;
         flex-direction:column;
         align-items:center;
+        justify-content:flex-end;
         filter: drop-shadow(0 4px 8px rgba(154,122,92,0.3));
       ">
         ${thumbHtml}
