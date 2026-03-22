@@ -8,13 +8,20 @@ interface Props {
 }
 
 export default function Modal({ title, onClose, children, size = 'md' }: Props) {
-  // Prevent body scroll while modal is open
+  // Lock body scroll while modal is open (prevents double-scroll on iOS)
   useEffect(() => {
+    const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
+    // Also prevent body from moving on iOS
+    document.body.style.position = 'fixed'
+    document.body.style.width = '100%'
+    return () => {
+      document.body.style.overflow = prev
+      document.body.style.position = ''
+      document.body.style.width = ''
+    }
   }, [])
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -31,16 +38,22 @@ export default function Modal({ title, onClose, children, size = 'md' }: Props) 
         onClick={onClose}
       />
 
-      {/* Panel — slides up from bottom on mobile, centered on desktop */}
+      {/* Sheet — slides up from bottom on mobile, centered on desktop */}
       <div
-        className={`relative w-full ${maxWidths[size]} bg-white rounded-t-3xl sm:rounded-3xl shadow-elevated animate-slide-up max-h-[90dvh] flex flex-col`}
+        className={`relative w-full ${maxWidths[size]} bg-white rounded-t-3xl sm:rounded-3xl shadow-elevated animate-slide-up flex flex-col`}
+        style={{ maxHeight: 'calc(90dvh - env(safe-area-inset-top))' }}
       >
+        {/* Drag handle (mobile only) */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
+          <div className="w-10 h-1 rounded-full bg-cream-200" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-cream-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 sm:py-5 border-b border-cream-100 flex-shrink-0">
           <h2 className="font-display text-lg text-espresso-800">{title}</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-espresso-400 hover:bg-cream-100 hover:text-espresso-600 transition-colors text-xl leading-none"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-espresso-400 hover:bg-cream-100 hover:text-espresso-600 active:bg-cream-200 transition-colors text-2xl leading-none"
             aria-label="Close"
           >
             ×
@@ -48,7 +61,10 @@ export default function Modal({ title, onClose, children, size = 'md' }: Props) 
         </div>
 
         {/* Scrollable content */}
-        <div className="overflow-y-auto flex-1">
+        <div
+          className="overflow-y-auto flex-1"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
           {children}
         </div>
       </div>
