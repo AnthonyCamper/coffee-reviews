@@ -50,14 +50,7 @@ self.addEventListener('notificationclick', (event) => {
 
   const url = event.notification.data?.url || '/'
   const fullUrl = new URL(url, APP_ORIGIN).href
-
-  // Mark notification as read via the API
   const notificationId = event.notification.data?.notificationId
-  if (notificationId) {
-    // Fire-and-forget: mark as read
-    fetch(`${APP_ORIGIN}/__mark-read?id=${notificationId}`)
-      .catch(() => {}) // ignore errors
-  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {

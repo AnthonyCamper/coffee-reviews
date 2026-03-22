@@ -46,7 +46,7 @@ export default function ReviewCard({
 
   return (
     <>
-      <div className={`${compact ? 'py-3' : 'py-4'} animate-fade-in`}>
+      <div id={`review-${review.id}`} className={`${compact ? 'py-3' : 'py-4'} animate-fade-in transition-shadow duration-300`}>
         {/* Ratings row */}
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
           <span className="rating-coffee">

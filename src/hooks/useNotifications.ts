@@ -160,9 +160,19 @@ export function useNotifications(userId: string | undefined): UseNotificationsRe
               setUnreadCount(prev => Math.max(0, prev - 1))
             })
         }
-        // Navigate if the app is open
-        if (url && url !== window.location.pathname + window.location.search) {
-          window.location.href = url
+        // Navigate if the app is open — dispatch event so Home can handle
+        // without a full page reload
+        if (url) {
+          const parsed = new URL(url, window.location.origin)
+          const photoId = parsed.searchParams.get('photo')
+          const reviewId = parsed.searchParams.get('review')
+          if (photoId || reviewId) {
+            window.dispatchEvent(new CustomEvent('push-deep-link', {
+              detail: { photoId, reviewId },
+            }))
+          } else if (url !== window.location.pathname + window.location.search) {
+            window.location.href = url
+          }
         }
       }
 
