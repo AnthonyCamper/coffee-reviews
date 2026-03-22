@@ -13,6 +13,7 @@ interface Props {
 export default function ReviewEditModal({ review, onClose, onSubmit }: Props) {
   const [coffeeRating, setCoffeeRating] = useState(review.coffee_rating)
   const [vibeRating, setVibeRating] = useState(review.vibe_rating)
+  const [coffeeType, setCoffeeType] = useState(review.coffee_type ?? '')
   const [note, setNote] = useState(review.note ?? '')
   const [visitedAt, setVisitedAt] = useState(review.visited_at.split('T')[0])
 
@@ -37,6 +38,7 @@ export default function ReviewEditModal({ review, onClose, onSubmit }: Props) {
     await onSubmit({
       coffee_rating: coffeeRating,
       vibe_rating: vibeRating,
+      coffee_type: coffeeType,
       note,
       visited_at: visitedAt,
       photos_to_delete: deletedPhotoIds,
@@ -66,6 +68,19 @@ export default function ReviewEditModal({ review, onClose, onSubmit }: Props) {
               <span className="text-sm text-espresso-500 font-medium">{vibeRating}/10</span>
             )}
           </div>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="edit-coffee-type">What did you order? (optional)</label>
+          <input
+            id="edit-coffee-type"
+            type="text"
+            className="input"
+            maxLength={60}
+            value={coffeeType}
+            onChange={e => setCoffeeType(e.target.value)}
+            placeholder="Flat white, oat latte, cortado…"
+          />
         </div>
 
         <div>

@@ -146,6 +146,7 @@ export function useReviews(): UseReviewsReturn {
         coffee_shop_id: shopData.id,
         coffee_rating: data.coffee_rating,
         vibe_rating: data.vibe_rating,
+        coffee_type: data.coffee_type.trim() || null,
         note: data.note.trim() || null,
         visited_at: data.visited_at,
       })
@@ -200,6 +201,7 @@ export function useReviews(): UseReviewsReturn {
     const updates: Record<string, unknown> = {}
     if (data.coffee_rating !== undefined) updates.coffee_rating = data.coffee_rating
     if (data.vibe_rating !== undefined) updates.vibe_rating = data.vibe_rating
+    if (data.coffee_type !== undefined) updates.coffee_type = data.coffee_type.trim() || null
     if (data.note !== undefined) updates.note = data.note.trim() || null
     if (data.visited_at !== undefined) updates.visited_at = data.visited_at
 
