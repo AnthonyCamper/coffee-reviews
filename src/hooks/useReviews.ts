@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import type { ShopWithReviews, Review, CoffeeShop, ReviewFormData, ReviewPhoto } from '../lib/types'
+import type { ShopWithReviews, Review, CoffeeShop, ReviewFormData, ReviewUpdateData, ReviewPhoto } from '../lib/types'
 
 interface UseReviewsReturn {
   shops: ShopWithReviews[]
@@ -8,7 +8,7 @@ interface UseReviewsReturn {
   error: string | null
   refresh: () => Promise<void>
   createReview: (data: ReviewFormData, userId: string) => Promise<{ error: string | null }>
-  updateReview: (reviewId: string, data: Partial<ReviewFormData>) => Promise<{ error: string | null }>
+  updateReview: (reviewId: string, data: ReviewUpdateData) => Promise<{ error: string | null }>
   deleteReview: (reviewId: string) => Promise<{ error: string | null }>
 }
 
@@ -194,20 +194,85 @@ export function useReviews(): UseReviewsReturn {
 
   const updateReview = async (
     reviewId: string,
-    data: Partial<ReviewFormData>
+    data: ReviewUpdateData
   ): Promise<{ error: string | null }> => {
+    // 1. Update review fields
     const updates: Record<string, unknown> = {}
     if (data.coffee_rating !== undefined) updates.coffee_rating = data.coffee_rating
     if (data.vibe_rating !== undefined) updates.vibe_rating = data.vibe_rating
     if (data.note !== undefined) updates.note = data.note.trim() || null
     if (data.visited_at !== undefined) updates.visited_at = data.visited_at
 
-    const { error: err } = await supabase
-      .from('reviews')
-      .update(updates)
-      .eq('id', reviewId)
+    if (Object.keys(updates).length > 0) {
+      const { error: err } = await supabase
+        .from('reviews')
+        .update(updates)
+        .eq('id', reviewId)
 
-    if (err) return { error: err.message }
+      if (err) return { error: err.message }
+    }
+
+    // 2. Delete photos marked for removal
+    if (data.photos_to_delete?.length) {
+      // Fetch storage paths for the photos being deleted
+      const { data: photosData } = await supabase
+        .from('review_photos')
+        .select('id, storage_path')
+        .in('id', data.photos_to_delete)
+
+      if (photosData?.length) {
+        const paths = photosData.map(p => p.storage_path)
+        // Remove from storage (non-fatal)
+        await supabase.storage.from('review-photos').remove(paths)
+        // Remove DB rows
+        await supabase.from('review_photos').delete().in('id', data.photos_to_delete)
+      }
+    }
+
+    // 3. Upload new photos
+    if (data.new_photos?.length) {
+      const { data: { user } } = await supabase.auth.getUser()
+      const userId = user?.id
+      if (userId) {
+        // Determine next display_order
+        const { data: existing } = await supabase
+          .from('review_photos')
+          .select('display_order')
+          .eq('review_id', reviewId)
+          .order('display_order', { ascending: false })
+          .limit(1)
+        let nextOrder = existing?.[0]?.display_order != null
+          ? existing[0].display_order + 1
+          : 0
+
+        for (const file of data.new_photos) {
+          try {
+            const compressed = await compressImage(file)
+            const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
+            const path = `${userId}/${reviewId}/${filename}`
+
+            const { error: uploadErr } = await supabase.storage
+              .from('review-photos')
+              .upload(path, compressed, { contentType: 'image/jpeg' })
+
+            if (!uploadErr) {
+              const { data: { publicUrl } } = supabase.storage
+                .from('review-photos')
+                .getPublicUrl(path)
+
+              await supabase.from('review_photos').insert({
+                review_id: reviewId,
+                storage_path: path,
+                url: publicUrl,
+                display_order: nextOrder++,
+              })
+            }
+          } catch {
+            // Non-fatal — continue uploading remaining photos
+          }
+        }
+      }
+    }
 
     await fetchAll()
     return { error: null }

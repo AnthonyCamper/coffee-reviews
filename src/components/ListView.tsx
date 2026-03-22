@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import StarRating from './ui/StarRating'
 import ReviewCard from './ReviewCard'
 import PhotoGallery from './ui/PhotoGallery'
-import type { ShopWithReviews, Review, ReviewPhoto } from '../lib/types'
+import type { ShopWithReviews, Review, ReviewPhoto, ReviewUpdateData } from '../lib/types'
 
 type SortKey = 'name' | 'coffee' | 'vibe'
 
@@ -12,7 +12,7 @@ interface Props {
   error: string | null
   currentUserId: string
   isAdmin: boolean
-  onUpdate: (id: string, data: Partial<{ coffee_rating: number; vibe_rating: number; note: string; visited_at: string }>) => Promise<{ error: string | null }>
+  onUpdate: (id: string, data: ReviewUpdateData) => Promise<{ error: string | null }>
   onDelete: (id: string) => Promise<{ error: string | null }>
 }
 

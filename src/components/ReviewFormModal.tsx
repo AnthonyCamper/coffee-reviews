@@ -229,7 +229,7 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
             <div className="flex items-center gap-3">
               <StarRating value={coffeeRating} interactive onChange={setCoffeeRating} size="lg" />
               {coffeeRating > 0 && (
-                <span className="text-sm text-espresso-500 font-medium">{coffeeRating}/5</span>
+                <span className="text-sm text-espresso-500 font-medium">{coffeeRating}/10</span>
               )}
             </div>
           </div>
@@ -239,7 +239,7 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
             <div className="flex items-center gap-3">
               <StarRating value={vibeRating} interactive onChange={setVibeRating} size="lg" />
               {vibeRating > 0 && (
-                <span className="text-sm text-espresso-500 font-medium">{vibeRating}/5</span>
+                <span className="text-sm text-espresso-500 font-medium">{vibeRating}/10</span>
               )}
             </div>
           </div>

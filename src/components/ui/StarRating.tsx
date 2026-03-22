@@ -1,5 +1,5 @@
 interface Props {
-  value: number          // 0–5, supports decimals for display
+  value: number          // 0–10, supports decimals for display
   max?: number
   size?: 'sm' | 'md' | 'lg'
   interactive?: false
@@ -14,13 +14,14 @@ interface InteractiveProps {
 }
 
 export default function StarRating(props: Props | InteractiveProps) {
-  const { value, max = 5, size = 'md' } = props
+  const { value, max = 10, size = 'md' } = props
   const interactive = 'interactive' in props && props.interactive
 
+  // Slightly tighter sizing so 10 stars remain compact on small screens
   const sizes = {
-    sm: 'text-sm',
-    md: 'text-base',
-    lg: 'text-lg',
+    sm: 'text-xs',
+    md: 'text-sm',
+    lg: 'text-base',
   }
 
   return (

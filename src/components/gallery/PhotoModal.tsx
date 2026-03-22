@@ -58,7 +58,7 @@ export default function PhotoModal({
         {/* ── Left / Top: Photo ─────────────────────────────────────────────── */}
         <div className="sm:w-[46%] flex-shrink-0 bg-cream-100 sm:bg-black
                         flex items-center justify-center
-                        aspect-[4/3] sm:aspect-auto sm:max-h-full">
+                        aspect-video sm:aspect-auto sm:max-h-full">
           <img
             src={photo.photo_url}
             alt={photo.shop_name}

@@ -65,8 +65,8 @@ export interface Review {
   id: string
   coffee_shop_id: string
   user_id: string
-  coffee_rating: number   // 1–5
-  vibe_rating: number     // 1–5
+  coffee_rating: number   // 1–10
+  vibe_rating: number     // 1–10
   note: string | null
   visited_at: string
   created_at: string
@@ -145,4 +145,13 @@ export interface ReviewFormData {
   note: string
   visited_at: string
   photos?: File[]
+}
+
+export interface ReviewUpdateData {
+  coffee_rating?: number
+  vibe_rating?: number
+  note?: string
+  visited_at?: string
+  photos_to_delete?: string[]   // review_photos IDs to remove from DB + storage
+  new_photos?: File[]           // new photos to upload and attach
 }
