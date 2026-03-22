@@ -61,7 +61,7 @@ export default function GalleryView({ currentUserId, isAdmin }: Props) {
 
   return (
     <>
-      <div className="max-w-2xl mx-auto px-4 py-4 pb-24">
+      <div className="max-w-2xl mx-auto px-4 py-4 pb-safe-8">
         {/* Compact filter/title row */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-base font-semibold text-espresso-700">
@@ -70,7 +70,7 @@ export default function GalleryView({ currentUserId, isAdmin }: Props) {
         </div>
 
         {/* Photo grid */}
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
           {gallery.photos.map(photo => (
             <PhotoCard
               key={photo.photo_id}

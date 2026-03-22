@@ -2,12 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#fdfaf7" />
-    <meta name="description" content="Talia's Coffee Ratings — discover and rate your favourite coffee shops" />
 
-    <!-- Preconnect to Google Fonts -->
+    <!-- ── Viewport — viewport-fit=cover for notch/Dynamic Island support -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- ── Favicon & icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- ── Theme & app colours -->
+    <meta name="theme-color" content="#fb7185" />
+    <meta name="msapplication-TileColor" content="#fb7185" />
+
+    <!-- ── iOS home-screen web app -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Talia's Coffee" />
+
+    <!-- ── SEO & Open Graph -->
+    <meta name="description" content="Talia's Coffee Ratings — a private corner for rating the coffee shops we love." />
+    <meta property="og:title" content="Talia's Coffee Ratings" />
+    <meta property="og:description" content="A private corner for rating the coffee shops we love." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- ── Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,7 +36,7 @@
       rel="stylesheet"
     />
 
-    <!-- Leaflet CSS -->
+    <!-- ── Leaflet CSS -->
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"

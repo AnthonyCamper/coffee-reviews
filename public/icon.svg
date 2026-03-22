@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </linearGradient>
+    <linearGradient id="cup" x1="0" y1="244" x2="0" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ffe4e6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background — full bleed (iOS adds its own corner mask) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- Subtle radial highlight top-left -->
+  <ellipse cx="160" cy="80" rx="220" ry="130" fill="white" opacity="0.07"/>
+
+  <!-- Steam wisps — three gentle S-curves -->
+  <path d="M196 224 C190 204 206 184 196 160 C186 136 202 116 196 90"
+        fill="none" stroke="white" stroke-width="13" stroke-linecap="round" opacity="0.48"/>
+  <path d="M256 216 C250 196 266 176 256 152 C246 128 262 108 256 82"
+        fill="none" stroke="white" stroke-width="13" stroke-linecap="round" opacity="0.48"/>
+  <path d="M316 224 C310 204 326 184 316 160 C306 136 322 116 316 90"
+        fill="none" stroke="white" stroke-width="13" stroke-linecap="round" opacity="0.48"/>
+
+  <!-- Cup rim -->
+  <rect x="158" y="244" width="196" height="26" rx="13" fill="url(#cup)"/>
+
+  <!-- Cup body — tapered (wider at top) -->
+  <path d="M168 268 L190 386 Q193 402 211 402 L301 402 Q319 402 322 386 L344 268 Z"
+        fill="url(#cup)"/>
+
+  <!-- Handle — D-shape -->
+  <path d="M334 280 Q388 280 388 320 Q388 360 334 360"
+        fill="none" stroke="url(#cup)" stroke-width="22" stroke-linecap="round"/>
+
+  <!-- Coffee surface (warm peek inside) -->
+  <ellipse cx="256" cy="268" rx="80" ry="11" fill="#c2410c" opacity="0.18"/>
+
+  <!-- Saucer -->
+  <ellipse cx="256" cy="411" rx="112" ry="14" fill="white" opacity="0.20"/>
+  <ellipse cx="256" cy="408" rx="82" ry="8" fill="white" opacity="0.35"/>
+</svg>
