@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import StarRating from '../ui/StarRating'
 import CommentSection from './CommentSection'
 import HeartIcon from './HeartIcon'
+import { Lightbox } from '../ui/PhotoGallery'
 import { usePhotoInteractions } from '../../hooks/usePhotoInteractions'
 import type { GalleryPhoto } from '../../lib/types'
 
@@ -25,19 +26,21 @@ export default function PhotoModal({
 }: Props) {
   const interactions = usePhotoInteractions(photo.photo_id, currentUserId)
 
+  const [showLightbox, setShowLightbox] = useState(false)
+
   // Mobile layout owns the comment input directly (comment list is embedded in scroll area)
   const [mobileText, setMobileText] = useState('')
   const [mobilePosting, setMobilePosting] = useState(false)
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showLightbox) onClose() }
     document.addEventListener('keydown', handler)
     document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', handler)
       document.body.style.overflow = ''
     }
-  }, [onClose])
+  }, [onClose, showLightbox])
 
   const handleMobilePost = async () => {
     if (!mobileText.trim() || mobilePosting) return
@@ -90,7 +93,10 @@ export default function PhotoModal({
         <div className="flex-1 overflow-y-auto min-h-0">
 
           {/* Photo */}
-          <div className="w-full bg-cream-100 aspect-video overflow-hidden">
+          <div
+            className="w-full bg-cream-100 aspect-video overflow-hidden cursor-zoom-in"
+            onClick={() => setShowLightbox(true)}
+          >
             <img
               src={photo.photo_url}
               alt={photo.shop_name}
@@ -214,7 +220,10 @@ export default function PhotoModal({
         onClick={e => e.stopPropagation()}
       >
         {/* ── Left: Photo ─────────────────────────────────────────── */}
-        <div className="sm:w-[46%] flex-shrink-0 bg-black flex items-center justify-center">
+        <div
+          className="sm:w-[46%] flex-shrink-0 bg-black flex items-center justify-center cursor-zoom-in"
+          onClick={() => setShowLightbox(true)}
+        >
           <img
             src={photo.photo_url}
             alt={photo.shop_name}
@@ -315,6 +324,15 @@ export default function PhotoModal({
           </div>
         </div>
       </div>
+      {showLightbox && (
+        <div onClick={e => e.stopPropagation()}>
+          <Lightbox
+            photos={[{ id: photo.photo_id, url: photo.photo_url, review_id: '', storage_path: '', display_order: 0, created_at: '' }]}
+            initialIndex={0}
+            onClose={() => setShowLightbox(false)}
+          />
+        </div>
+      )}
     </div>
   )
 }
