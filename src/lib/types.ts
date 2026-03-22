@@ -135,6 +135,56 @@ export interface PhotoComment {
   reactions: CommentReaction[]
 }
 
+// ─── Notification types ──────────────────────────────────────────────────────
+
+export type NotificationType =
+  | 'new_review'
+  | 'photo_comment'
+  | 'comment_reply'
+  | 'photo_like'
+  | 'comment_like'
+  | 'comment_reaction'
+
+export interface Notification {
+  id: string
+  recipient_id: string
+  actor_id: string | null
+  type: NotificationType
+  review_id: string | null
+  photo_id: string | null
+  comment_id: string | null
+  shop_name: string | null
+  preview_text: string | null
+  read: boolean
+  push_sent: boolean
+  created_at: string
+  // Joined actor info (from query)
+  actor_name?: string | null
+  actor_avatar?: string | null
+}
+
+export interface NotificationPreferences {
+  user_id: string
+  enabled: boolean
+  new_review: boolean
+  photo_comment: boolean
+  comment_reply: boolean
+  photo_like: boolean
+  comment_like: boolean
+  comment_react: boolean
+  quiet_mode: boolean
+}
+
+export interface PushSubscriptionRecord {
+  id: string
+  user_id: string
+  endpoint: string
+  p256dh: string
+  auth_key: string
+  user_agent: string | null
+  created_at: string
+}
+
 // ─── Form types ───────────────────────────────────────────────────────────────
 
 export interface ReviewFormData {

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { triggerPushDelivery } from '../lib/pushManager'
 import type { ShopWithReviews, Review, CoffeeShop, ReviewFormData, ReviewUpdateData, ReviewPhoto } from '../lib/types'
 
 interface UseReviewsReturn {
@@ -190,6 +191,8 @@ export function useReviews(): UseReviewsReturn {
     }
 
     await fetchAll()
+    // Trigger push delivery for the new review notification
+    triggerPushDelivery()
     return { error: null }
   }
 

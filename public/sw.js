@@ -1,0 +1,123 @@
+// ============================================================================
+// Service Worker — Push notifications for Talia's Coffee
+// ============================================================================
+
+const APP_ORIGIN = self.location.origin
+
+// ── Push event: show notification ────────────────────────────────────────────
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return
+
+  let payload
+  try {
+    payload = event.data.json()
+  } catch {
+    payload = {
+      title: "Talia's Coffee",
+      body: event.data.text(),
+      data: { url: '/' },
+    }
+  }
+
+  const { title, body, icon, badge, tag, data } = payload
+
+  const options = {
+    body: body || '',
+    icon: icon || '/icons/icon-192.png',
+    badge: badge || '/icons/icon-192.png',
+    tag: tag || 'talias-coffee-' + Date.now(),
+    data: {
+      url: data?.url || '/',
+      notificationId: data?.notificationId,
+    },
+    // Group notifications from the same source
+    renotify: !!tag,
+    // Vibrate on mobile
+    vibrate: [100, 50, 100],
+    // Keep notification until user interacts
+    requireInteraction: false,
+    actions: [],
+  }
+
+  event.waitUntil(self.registration.showNotification(title || "Talia's Coffee", options))
+})
+
+// ── Notification click: deep link to correct screen ──────────────────────────
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+
+  const url = event.notification.data?.url || '/'
+  const fullUrl = new URL(url, APP_ORIGIN).href
+
+  // Mark notification as read via the API
+  const notificationId = event.notification.data?.notificationId
+  if (notificationId) {
+    // Fire-and-forget: mark as read
+    fetch(`${APP_ORIGIN}/__mark-read?id=${notificationId}`)
+      .catch(() => {}) // ignore errors
+  }
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // If the app is already open, focus it and navigate
+      for (const client of windowClients) {
+        if (client.url === fullUrl && 'focus' in client) {
+          return client.focus()
+        }
+      }
+
+      // If any app window is open, navigate it
+      for (const client of windowClients) {
+        if (new URL(client.url).origin === APP_ORIGIN && 'focus' in client) {
+          client.postMessage({
+            type: 'NOTIFICATION_CLICK',
+            url: url,
+            notificationId: notificationId,
+          })
+          return client.focus()
+        }
+      }
+
+      // Otherwise open a new window
+      return clients.openWindow(fullUrl)
+    })
+  )
+})
+
+// ── Subscription change: resubscribe ─────────────────────────────────────────
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.registration.pushManager
+      .subscribe(event.oldSubscription?.options || {
+        userVisibleOnly: true,
+      })
+      .then((newSubscription) => {
+        // Notify the app to update the subscription on the server
+        return clients.matchAll({ type: 'window' }).then((windowClients) => {
+          for (const client of windowClients) {
+            client.postMessage({
+              type: 'PUSH_SUBSCRIPTION_CHANGE',
+              subscription: newSubscription.toJSON(),
+              oldEndpoint: event.oldSubscription?.endpoint,
+            })
+          }
+        })
+      })
+      .catch(() => {
+        // Can't resubscribe — user will need to re-enable manually
+      })
+  )
+})
+
+// ── Install & activate: take control immediately ─────────────────────────────
+
+self.addEventListener('install', () => {
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim())
+})
