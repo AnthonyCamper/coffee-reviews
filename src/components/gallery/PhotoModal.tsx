@@ -232,7 +232,7 @@ export default function PhotoModal({
         </div>
 
         {/* ── Right: Details ──────────────────────────────────────── */}
-        <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex flex-col flex-1 min-h-0 min-w-0">
 
           {/* Header: reviewer + shop + ratings + close */}
           <div className="px-4 pt-4 pb-3 border-b border-cream-100 flex items-start justify-between gap-3 flex-shrink-0">
@@ -278,7 +278,7 @@ export default function PhotoModal({
                 <p className="text-xs font-medium text-espresso-500">☕ {photo.coffee_type}</p>
               )}
               {photo.note && (
-                <p className="text-sm text-espresso-600 leading-relaxed italic">"{photo.note}"</p>
+                <p className="text-sm text-espresso-600 leading-relaxed italic break-words">"{photo.note}"</p>
               )}
             </div>
           )}
