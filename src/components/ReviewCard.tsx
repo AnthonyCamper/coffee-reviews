@@ -3,13 +3,13 @@ import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import StarRating from './ui/StarRating'
 import ReviewEditModal from './ReviewEditModal'
-import type { Review } from '../lib/types'
+import type { Review, ReviewUpdateData } from '../lib/types'
 
 interface Props {
   review: Review
   currentUserId: string
   isAdmin: boolean
-  onUpdate: (id: string, data: { coffee_rating?: number; vibe_rating?: number; note?: string; visited_at?: string }) => Promise<{ error: string | null }>
+  onUpdate: (id: string, data: ReviewUpdateData) => Promise<{ error: string | null }>
   onDelete: (id: string) => Promise<{ error: string | null }>
   compact?: boolean
 }

@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
 
-const MAX_FILES = 5
 const MAX_MB = 5
 
 interface Props {
   files: File[]
   onChange: (files: File[]) => void
+  max?: number   // max total files allowed (default 5)
 }
 
 function validateFile(file: File): string | null {
@@ -14,7 +14,7 @@ function validateFile(file: File): string | null {
   return null
 }
 
-export default function PhotoUpload({ files, onChange }: Props) {
+export default function PhotoUpload({ files, onChange, max = 5 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
@@ -27,7 +27,7 @@ export default function PhotoUpload({ files, onChange }: Props) {
       valid.push(f)
     }
     if (errors.length) alert(errors.join('\n'))
-    const merged = [...files, ...valid].slice(0, MAX_FILES)
+    const merged = [...files, ...valid].slice(0, max)
     onChange(merged)
   }
 
@@ -60,7 +60,7 @@ export default function PhotoUpload({ files, onChange }: Props) {
           {dragging ? 'Drop to add' : 'Add photos'}
         </p>
         <p className="text-xs text-espresso-300">
-          Drag & drop or tap · up to {MAX_FILES} photos · {MAX_MB}MB each
+          Drag & drop or tap · up to {max} photos · {MAX_MB}MB each
         </p>
         <input
           ref={inputRef}
@@ -92,7 +92,7 @@ export default function PhotoUpload({ files, onChange }: Props) {
               </button>
             </div>
           ))}
-          {files.length < MAX_FILES && (
+          {files.length < max && (
             <button
               type="button"
               onClick={() => inputRef.current?.click()}

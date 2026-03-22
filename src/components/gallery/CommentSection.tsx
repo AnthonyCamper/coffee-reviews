@@ -45,7 +45,10 @@ export default function CommentSection({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    // flex-1 min-h-0 instead of h-full: iOS Safari doesn't resolve height:100% correctly
+    // when parent height is determined by the flex algorithm (not a definite value).
+    // flex-1 + min-h-0 fills available space reliably across all browsers.
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Comment list */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-0">
         {loading && (
@@ -73,8 +76,8 @@ export default function CommentSection({
         ))}
       </div>
 
-      {/* Input */}
-      <div className="border-t border-cream-100 px-4 py-3 flex items-end gap-2 bg-white">
+      {/* Input — flex-shrink-0 ensures the input bar is never compressed out of view */}
+      <div className="flex-shrink-0 border-t border-cream-100 px-4 py-3 flex items-end gap-2 bg-white">
         <textarea
           ref={inputRef}
           value={text}
@@ -83,7 +86,7 @@ export default function CommentSection({
           placeholder="Add a comment…"
           maxLength={500}
           rows={1}
-          className="flex-1 resize-none rounded-xl border border-cream-300 bg-cream-50 px-3 py-2 text-sm text-espresso-700 placeholder:text-espresso-300 focus:outline-none focus:ring-2 focus:ring-rose-300 focus:border-rose-300 transition-colors"
+          className="flex-1 resize-none rounded-xl border border-cream-300 bg-cream-50 px-3 py-2 text-base text-espresso-700 placeholder:text-espresso-300 focus:outline-none focus:ring-2 focus:ring-rose-300 focus:border-rose-300 transition-colors"
           style={{ maxHeight: '80px', overflowY: 'auto' }}
         />
         <button
