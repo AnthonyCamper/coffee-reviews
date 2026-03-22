@@ -56,12 +56,13 @@ export default function PhotoModal({
         onClick={e => e.stopPropagation()}
       >
         {/* ── Left / Top: Photo ─────────────────────────────────────────────── */}
-        <div className="sm:w-[46%] flex-shrink-0 bg-black flex items-center justify-center
-                        max-h-[40dvh] sm:max-h-full">
+        <div className="sm:w-[46%] flex-shrink-0 bg-cream-100 sm:bg-black
+                        flex items-center justify-center
+                        aspect-[4/3] sm:aspect-auto sm:max-h-full">
           <img
             src={photo.photo_url}
             alt={photo.shop_name}
-            className="w-full h-full object-contain sm:object-cover"
+            className="w-full h-full object-cover"
           />
         </div>
 
