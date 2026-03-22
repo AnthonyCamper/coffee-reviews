@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { triggerPushDelivery } from '../lib/pushManager'
 import type { GalleryPhoto } from '../lib/types'
 
 const PAGE_SIZE = 21 // 3-column multiples look clean
@@ -82,6 +83,7 @@ export function useGallery(currentUserId: string): UseGalleryReturn {
         await supabase
           .from('photo_likes')
           .insert({ photo_id: photoId, user_id: currentUserId })
+        triggerPushDelivery()
       }
     } catch {
       // Revert on failure

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { triggerPushDelivery } from '../lib/pushManager'
 import type { PhotoComment, CommentReaction } from '../lib/types'
 
 interface RawComment {
@@ -122,6 +123,8 @@ export function usePhotoInteractions(
     } else {
       // Replace temp with real data
       await fetchComments()
+      // Trigger push delivery for the notification created by the DB trigger
+      triggerPushDelivery()
     }
   }, [photoId, currentUserId, fetchComments])
 
@@ -148,6 +151,7 @@ export function usePhotoInteractions(
         await supabase.from('comment_likes').delete().match({ comment_id: commentId, user_id: currentUserId })
       } else {
         await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: currentUserId })
+        triggerPushDelivery()
       }
     } catch {
       setComments(prev =>
@@ -195,6 +199,7 @@ export function usePhotoInteractions(
         await supabase
           .from('comment_reactions')
           .insert({ comment_id: commentId, user_id: currentUserId, reaction_type: reactionType })
+        triggerPushDelivery()
       }
     } catch {
       // Revert on failure
