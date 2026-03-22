@@ -24,12 +24,11 @@ export default function NotificationCenter({ notifications, onClose }: Props) {
   const handleNotificationClick = (notif: Notification) => {
     markRead(notif.id)
     onClose()
-    // Navigate to the relevant content
-    if (notif.photo_id) {
-      // Gallery view with photo selected — use query param
-      window.location.href = `/?photo=${notif.photo_id}`
-    } else if (notif.review_id) {
-      window.location.href = `/?review=${notif.review_id}`
+    // Navigate to the relevant content via deep-link event (no full reload)
+    if (notif.photo_id || notif.review_id) {
+      window.dispatchEvent(new CustomEvent('push-deep-link', {
+        detail: { photoId: notif.photo_id, reviewId: notif.review_id },
+      }))
     }
   }
 

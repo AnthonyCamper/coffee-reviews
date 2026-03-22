@@ -4,7 +4,11 @@
 
 import { supabase } from './supabase'
 
+// VAPID public key — this is NOT a secret. It identifies the application server
+// to push services. The corresponding private key is a Supabase Edge Function secret.
+// Regenerate with: node scripts/generate-vapid-keys.js
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
+  || 'BJZJMvCa9GcMaNnvTafqOUHr2wPeXGBi1ZYNQH1EMRpypb1X_zk0ET_w8brgrwePx_E-H7-W4rrhQ7aUyOYH5SY'
 
 // ── Feature detection ────────────────────────────────────────────────────────
 
