@@ -13,6 +13,13 @@ interface Props {
   onDelete: (commentId: string) => Promise<void>
   onToggleLike: (commentId: string) => Promise<void>
   onToggleReaction: (commentId: string, reactionType: string) => Promise<void>
+  /**
+   * Embedded mode: renders only the comment list items without a scroll
+   * wrapper or input bar. Used in the mobile single-scroll layout where
+   * the parent scroll container provides the scrolling context, and the
+   * input bar is rendered separately by PhotoModal at the bottom of the sheet.
+   */
+  embedded?: boolean
 }
 
 export default function CommentSection({
@@ -24,6 +31,7 @@ export default function CommentSection({
   onDelete,
   onToggleLike,
   onToggleReaction,
+  embedded = false,
 }: Props) {
   const [text, setText] = useState('')
   const [posting, setPosting] = useState(false)
@@ -44,10 +52,41 @@ export default function CommentSection({
     }
   }
 
+  // ── Embedded mode ──────────────────────────────────────────────────────────
+  // Just renders the comment items. No scroll wrapper, no input bar.
+  // The parent scroll area handles scrolling; PhotoModal renders the input.
+  if (embedded) {
+    return (
+      <div className="px-4 py-3 space-y-4">
+        {loading && (
+          <div className="flex justify-center py-4">
+            <div className="w-5 h-5 rounded-full border-2 border-rose-300 border-t-rose-400 animate-spin" />
+          </div>
+        )}
+        {!loading && comments.length === 0 && (
+          <p className="text-center text-xs text-espresso-300 py-6">
+            No comments yet — be the first!
+          </p>
+        )}
+        {comments.map(comment => (
+          <CommentItem
+            key={comment.id}
+            comment={comment}
+            currentUserId={currentUserId}
+            isAdmin={isAdmin}
+            onDelete={onDelete}
+            onToggleLike={onToggleLike}
+            onToggleReaction={onToggleReaction}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  // ── Standalone mode (desktop) ───────────────────────────────────────────────
+  // Own scroll container + input bar. Works because the parent (desktop right
+  // panel) has a definite height via flex-row cross-axis stretch.
   return (
-    // flex-1 min-h-0 instead of h-full: iOS Safari doesn't resolve height:100% correctly
-    // when parent height is determined by the flex algorithm (not a definite value).
-    // flex-1 + min-h-0 fills available space reliably across all browsers.
     <div className="flex flex-col flex-1 min-h-0">
       {/* Comment list */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-0">
@@ -76,7 +115,7 @@ export default function CommentSection({
         ))}
       </div>
 
-      {/* Input — flex-shrink-0 ensures the input bar is never compressed out of view */}
+      {/* Input */}
       <div className="flex-shrink-0 border-t border-cream-100 px-4 py-3 flex items-end gap-2 bg-white">
         <textarea
           ref={inputRef}

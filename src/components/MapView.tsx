@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Map as LeafletMap, Marker } from 'leaflet'
+import type { Map as LeafletMap } from 'leaflet'
+import Supercluster from 'supercluster'
 import StarRating from './ui/StarRating'
 import ReviewCard from './ReviewCard'
 import { Lightbox } from './ui/PhotoGallery'
@@ -17,7 +18,10 @@ interface Props {
 export default function MapView({ shops, loading, currentUserId, isAdmin, onUpdate, onDelete }: Props) {
   const mapRef = useRef<HTMLDivElement>(null)
   const leafletRef = useRef<LeafletMap | null>(null)
-  const markersRef = useRef<Marker[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markersRef = useRef<any[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderRef = useRef<(() => void) | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [selectedShop, setSelectedShop] = useState<ShopWithReviews | null>(null)
 
@@ -74,6 +78,8 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
     })
 
     return () => {
+      renderRef.current = null
+      markersRef.current = []
       if (leafletRef.current) {
         leafletRef.current.remove()
         leafletRef.current = null
@@ -81,41 +87,101 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
     }
   }, [])
 
-  // ── Markers ──────────────────────────────────────────────────────────────
+  // ── Markers + Clustering ─────────────────────────────────────────────────
   // Depends on `mapReady` so it re-runs the moment Leaflet is initialised,
   // even if shops were already loaded before the map mounted (the race that
   // caused markers to silently disappear).
+  // Uses supercluster (pure ESM) for viewport-aware zoom-based clustering.
   useEffect(() => {
     if (!leafletRef.current) return
 
     import('leaflet').then(L => {
       const map = leafletRef.current!
 
-      // Remove stale markers
+      // Detach any previous moveend/zoomend handler before replacing it
+      if (renderRef.current) {
+        map.off('moveend', renderRef.current)
+        map.off('zoomend', renderRef.current)
+        renderRef.current = null
+      }
+
+      // Clear stale markers
       markersRef.current.forEach(m => m.remove())
       markersRef.current = []
 
-      const bounds: [number, number][] = []
+      if (shopsWithReviews.length === 0) return
 
-      shopsWithReviews.forEach(shopData => {
-        const { shop, avg_coffee, avg_vibe, photos } = shopData
-        bounds.push([shop.lat, shop.lng])
+      // Build the spatial index for this set of shops
+      const sc = new Supercluster<{ id: string }>({ radius: 60, maxZoom: 16 })
+      sc.load(
+        shopsWithReviews.map(s => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [s.shop.lng, s.shop.lat] },
+          properties: { id: s.shop.id },
+        }))
+      )
 
-        const coverPhoto = photos[0]?.url ?? null
-        const icon = createPinIcon(L, avg_coffee, avg_vibe, coverPhoto)
-        const marker = L.marker([shop.lat, shop.lng], { icon })
-          .addTo(map)
-          .on('click', () => setSelectedShop(shopData))
+      // render() recomputes clusters for the current viewport and replaces markers.
+      // Called once immediately, then on every moveend/zoomend.
+      function render() {
+        markersRef.current.forEach(m => m.remove())
+        markersRef.current = []
 
-        markersRef.current.push(marker)
-      })
+        const b = map.getBounds()
+        const zoom = Math.floor(map.getZoom())
+        const bbox: [number, number, number, number] = [
+          b.getWest(), b.getSouth(), b.getEast(), b.getNorth(),
+        ]
 
-      if (bounds.length > 0) {
-        map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 15 })
+        sc.getClusters(bbox, zoom).forEach(feature => {
+          const [lng, lat] = feature.geometry.coordinates
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const props = feature.properties as any
+
+          if (props.cluster) {
+            // Cluster badge — click zooms to the expansion zoom for that cluster
+            const icon = createClusterIcon(L, props.point_count as number)
+            const marker = L.marker([lat, lng], { icon })
+              .on('click', () => {
+                const z = Math.min(sc.getClusterExpansionZoom(props.cluster_id as number), 18)
+                map.flyTo([lat, lng], z, { duration: 0.35 })
+              })
+            marker.addTo(map)
+            markersRef.current.push(marker)
+          } else {
+            // Individual coffee pin
+            const shopData = shopsWithReviews.find(s => s.shop.id === props.id)
+            if (!shopData) return
+            const icon = createPinIcon(L, shopData.avg_coffee, shopData.avg_vibe, shopData.photos[0]?.url ?? null)
+            const marker = L.marker([lat, lng], { icon })
+              .on('click', () => setSelectedShop(shopData))
+            marker.addTo(map)
+            markersRef.current.push(marker)
+          }
+        })
       }
+
+      renderRef.current = render
+      map.on('moveend', render)
+      map.on('zoomend', render)
+
+      // Initial render then fit all shops into view
+      render()
+      const allBounds = shopsWithReviews.map(s => [s.shop.lat, s.shop.lng]) as [number, number][]
+      map.fitBounds(allBounds as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 15 })
     })
+
+    return () => {
+      if (renderRef.current && leafletRef.current) {
+        leafletRef.current.off('moveend', renderRef.current)
+        leafletRef.current.off('zoomend', renderRef.current)
+        renderRef.current = null
+      }
+      markersRef.current.forEach(m => m.remove())
+      markersRef.current = []
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapReady, shopsWithReviews.length, shopsWithReviews.map(s => s.shop.id).join(',')])
+  }, [mapReady, shopsWithReviews.map(s => s.shop.id).join(',')])
 
   return (
     <div className="relative h-[calc(100dvh-64px)]">
@@ -205,6 +271,41 @@ function createPinIcon(L: any, avgCoffee: number, avgVibe: number, photoUrl: str
           clip-path: polygon(0 0, 100% 0, 50% 100%);
           margin-top: -1px;
         "></div>
+      </div>
+    `,
+  })
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createClusterIcon(L: any, count: number) {
+  // Scale the badge size slightly with count so large clusters feel distinct
+  const size = count < 10 ? 42 : count < 50 ? 48 : 56
+  const fontSize = count < 10 ? 13 : count < 100 ? 12 : 11
+
+  return L.divIcon({
+    className: '',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `
+      <div style="
+        width: ${size}px;
+        height: ${size}px;
+        background: white;
+        border: 2.5px solid #fda4af;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        filter: drop-shadow(0 4px 10px rgba(154,122,92,0.32));
+      ">
+        <span style="
+          font-family: Inter, system-ui, sans-serif;
+          font-weight: 700;
+          font-size: ${fontSize}px;
+          color: #5c4029;
+          line-height: 1;
+          white-space: nowrap;
+        ">☕ ${count}</span>
       </div>
     `,
   })
