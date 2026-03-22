@@ -114,10 +114,15 @@ export default function PhotoModal({
             </button>
           </div>
 
-          {/* Caption */}
-          {photo.note && (
-            <div className="px-4 py-2.5 border-b border-cream-100 flex-shrink-0">
-              <p className="text-sm text-espresso-600 leading-relaxed italic">"{photo.note}"</p>
+          {/* Coffee type + caption */}
+          {(photo.coffee_type || photo.note) && (
+            <div className="px-4 py-2.5 border-b border-cream-100 flex-shrink-0 space-y-1">
+              {photo.coffee_type && (
+                <p className="text-xs font-medium text-espresso-500">☕ {photo.coffee_type}</p>
+              )}
+              {photo.note && (
+                <p className="text-sm text-espresso-600 leading-relaxed italic">"{photo.note}"</p>
+              )}
             </div>
           )}
 

@@ -57,6 +57,13 @@ export default function ReviewCard({
           </span>
         </div>
 
+        {/* Coffee type */}
+        {review.coffee_type && (
+          <p className="text-xs text-espresso-500 mb-1.5 font-medium">
+            ☕ {review.coffee_type}
+          </p>
+        )}
+
         {/* Note */}
         {review.note && (
           <p className="text-sm text-espresso-600 leading-relaxed mb-1.5 italic">

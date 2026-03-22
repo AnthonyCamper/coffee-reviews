@@ -20,6 +20,7 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
   const [lng, setLng] = useState('')
   const [coffeeRating, setCoffeeRating] = useState(0)
   const [vibeRating, setVibeRating] = useState(0)
+  const [coffeeType, setCoffeeType] = useState('')
   const [note, setNote] = useState('')
   const [visitedAt, setVisitedAt] = useState(today)
   const [photos, setPhotos] = useState<File[]>([])
@@ -85,6 +86,7 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
       lng,
       coffee_rating: coffeeRating,
       vibe_rating: vibeRating,
+      coffee_type: coffeeType,
       note,
       visited_at: visitedAt,
       photos,
@@ -242,6 +244,19 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
                 <span className="text-sm text-espresso-500 font-medium">{vibeRating}/10</span>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className="label" htmlFor="coffee-type">What did you order? (optional)</label>
+            <input
+              id="coffee-type"
+              type="text"
+              className="input"
+              maxLength={60}
+              value={coffeeType}
+              onChange={e => setCoffeeType(e.target.value)}
+              placeholder="Flat white, oat latte, cortado…"
+            />
           </div>
 
           <div>
