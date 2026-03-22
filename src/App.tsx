@@ -66,6 +66,19 @@ export default function App() {
       />
 
       <Routes>
+        <Route path="/login" element={
+          auth.status === 'unauthenticated' ? (
+            <Login
+              onSignInGoogle={auth.signInWithGoogle}
+              onSignInEmail={auth.signInWithEmail}
+              isPublic={isPublic}
+              onBrowse={isPublic ? () => window.history.back() : undefined}
+            />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+
         <Route path="/register" element={
           auth.status === 'unauthenticated' ? (
             <Register onSignUp={auth.signUpWithEmail} />

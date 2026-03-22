@@ -1,7 +1,10 @@
 import { ReactNode, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { AuthState } from '../hooks/useAuth'
+import { useNotifications } from '../hooks/useNotifications'
 import ProfileModal from './ProfileModal'
+import NotificationBell from './NotificationBell'
+import NotificationSettings from './NotificationSettings'
 
 type View = 'list' | 'map' | 'gallery'
 
@@ -24,6 +27,8 @@ export default function Layout({ auth, view, onViewChange, onAddReview, readOnly
   const navigate = useNavigate()
   const [profileOpen, setProfileOpen] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [showNotifSettings, setShowNotifSettings] = useState(false)
+  const notificationsHook = useNotifications(auth.user?.id)
 
   const user = auth.user
   const profile = auth.profile
@@ -68,9 +73,11 @@ export default function Layout({ auth, view, onViewChange, onAddReview, readOnly
             ))}
           </div>
 
-          {/* Profile / Sign in */}
+          {/* Notifications + Profile */}
           {user ? (
-            <div className="relative flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
+            <NotificationBell notifications={notificationsHook} />
+            <div className="relative">
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-cream-200 hover:ring-rose-300 transition-all flex items-center justify-center bg-cream-200"
@@ -109,6 +116,13 @@ export default function Layout({ auth, view, onViewChange, onAddReview, readOnly
                       My Profile
                     </button>
 
+                    <button
+                      onClick={() => { setProfileOpen(false); setShowNotifSettings(true) }}
+                      className="w-full px-4 py-3.5 text-left text-sm text-espresso-600 hover:bg-cream-50 active:bg-cream-100 transition-colors border-t border-cream-100"
+                    >
+                      Notification Settings
+                    </button>
+
                     {auth.isAdmin && (
                       <button
                         onClick={() => { setProfileOpen(false); navigate('/admin') }}
@@ -128,9 +142,10 @@ export default function Layout({ auth, view, onViewChange, onAddReview, readOnly
                 </>
               )}
             </div>
+            </div>
           ) : (
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/login')}
               className="btn-secondary px-3 py-2 text-xs flex-shrink-0"
             >
               Sign in
@@ -162,6 +177,14 @@ export default function Layout({ auth, view, onViewChange, onAddReview, readOnly
         <ProfileModal
           auth={auth}
           onClose={() => setShowProfileModal(false)}
+        />
+      )}
+
+      {/* ── Notification settings modal ─────────────────────────────── */}
+      {showNotifSettings && (
+        <NotificationSettings
+          notifications={notificationsHook}
+          onClose={() => setShowNotifSettings(false)}
         />
       )}
     </div>
