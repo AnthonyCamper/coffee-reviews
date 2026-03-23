@@ -4,6 +4,7 @@ import ReviewCard from './ReviewCard'
 import PhotoGallery from './ui/PhotoGallery'
 import PhotoModal from './gallery/PhotoModal'
 import { usePhotoDetail, fetchCommentCounts } from '../hooks/usePhotoDetail'
+import { fetchReviewCommentCounts } from '../hooks/useReviewComments'
 import type { ShopWithReviews, Review, ReviewPhoto, ReviewUpdateData } from '../lib/types'
 
 type SortKey = 'name' | 'coffee' | 'vibe'
@@ -26,12 +27,17 @@ export default function ListView({ shops, loading, error, currentUserId, isAdmin
 
   const photoDetail = usePhotoDetail(currentUserId)
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+  const [reviewCommentCounts, setReviewCommentCounts] = useState<Record<string, number>>({})
 
-  // Fetch comment counts for all photos
+  // Fetch comment counts for all photos and reviews
   useEffect(() => {
     const allPhotoIds = shops.flatMap(s => s.photos.map(p => p.id))
     if (allPhotoIds.length > 0) {
       fetchCommentCounts(allPhotoIds).then(setCommentCounts)
+    }
+    const allReviewIds = shops.flatMap(s => s.reviews.map(r => r.id))
+    if (allReviewIds.length > 0) {
+      fetchReviewCommentCounts(allReviewIds).then(setReviewCommentCounts)
     }
   }, [shops])
 
@@ -144,6 +150,7 @@ export default function ListView({ shops, loading, error, currentUserId, isAdmin
                 onDelete={onDelete}
                 onPhotoOpen={photoDetail.open}
                 commentCounts={commentCounts}
+                reviewCommentCounts={reviewCommentCounts}
                 onViewOnMap={onViewOnMap}
               />
             ))}
@@ -190,13 +197,14 @@ interface ShopCardProps {
   onDelete: Props['onDelete']
   onPhotoOpen: (photoId: string) => void
   commentCounts: Record<string, number>
+  reviewCommentCounts: Record<string, number>
   onViewOnMap?: (shopId: string) => void
 }
 
 function ShopCard({
   shopId, name, address, reviews, avgCoffee, avgVibe, photos,
   expanded, onToggle, currentUserId, isAdmin, onUpdate, onDelete,
-  onPhotoOpen, commentCounts, onViewOnMap,
+  onPhotoOpen, commentCounts, reviewCommentCounts, onViewOnMap,
 }: ShopCardProps) {
   return (
     <div className="card animate-slide-up">
@@ -212,9 +220,12 @@ function ShopCard({
           <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
             <p className="text-xs text-espresso-400 truncate">{address}</p>
             {onViewOnMap && (
-              <button
+              <span
                 onClick={e => { e.stopPropagation(); onViewOnMap(shopId) }}
-                className="flex-shrink-0 flex items-center gap-1 text-xs text-rose-400 hover:text-rose-500 font-medium transition-colors"
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onViewOnMap(shopId) } }}
+                role="button"
+                tabIndex={0}
+                className="flex-shrink-0 flex items-center gap-1 text-xs text-rose-400 hover:text-rose-500 font-medium transition-colors cursor-pointer"
                 aria-label="View on map"
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -222,7 +233,7 @@ function ShopCard({
                   <circle cx="12" cy="10" r="3" />
                 </svg>
                 <span className="hidden sm:inline">Map</span>
-              </button>
+              </span>
             )}
           </div>
 
@@ -304,6 +315,7 @@ function ShopCard({
                 isAdmin={isAdmin}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
+                commentCount={reviewCommentCounts[review.id] ?? 0}
               />
             ))}
           </div>

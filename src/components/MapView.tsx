@@ -6,6 +6,7 @@ import ReviewCard from './ReviewCard'
 import PhotoModal from './gallery/PhotoModal'
 import { Lightbox } from './ui/PhotoGallery'
 import { usePhotoDetail, fetchCommentCounts } from '../hooks/usePhotoDetail'
+import { fetchReviewCommentCounts } from '../hooks/useReviewComments'
 import type { ShopWithReviews, Review, ReviewPhoto, ReviewUpdateData } from '../lib/types'
 
 interface Props {
@@ -31,6 +32,7 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
 
   const photoDetail = usePhotoDetail(currentUserId)
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+  const [reviewCommentCounts, setReviewCommentCounts] = useState<Record<string, number>>({})
 
   const shopsWithReviews = shops.filter(s => s.reviews.length > 0)
 
@@ -39,11 +41,15 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
   const shopsRef = useRef(shopsWithReviews)
   useEffect(() => { shopsRef.current = shopsWithReviews })
 
-  // Fetch comment counts for all photos
+  // Fetch comment counts for all photos and reviews
   useEffect(() => {
     const allPhotoIds = shopsWithReviews.flatMap(s => s.photos.map(p => p.id))
     if (allPhotoIds.length > 0) {
       fetchCommentCounts(allPhotoIds).then(setCommentCounts)
+    }
+    const allReviewIds = shopsWithReviews.flatMap(s => s.reviews.map(r => r.id))
+    if (allReviewIds.length > 0) {
+      fetchReviewCommentCounts(allReviewIds).then(setReviewCommentCounts)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopsWithReviews.map(s => s.shop.id).join(',')])
@@ -247,6 +253,7 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
           onDelete={onDelete}
           onPhotoOpen={photoDetail.open}
           commentCounts={commentCounts}
+          reviewCommentCounts={reviewCommentCounts}
         />
       )}
 
@@ -377,9 +384,10 @@ interface ShopPanelProps {
   onDelete: Props['onDelete']
   onPhotoOpen: (photoId: string) => void
   commentCounts: Record<string, number>
+  reviewCommentCounts: Record<string, number>
 }
 
-function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDelete, onPhotoOpen, commentCounts }: ShopPanelProps) {
+function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDelete, onPhotoOpen, commentCounts, reviewCommentCounts }: ShopPanelProps) {
   const { shop, reviews, avg_coffee, avg_vibe, photos } = shopData
 
   return (
@@ -447,6 +455,7 @@ function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDele
                 onUpdate={onUpdate}
                 onDelete={onDelete}
                 compact
+                commentCount={reviewCommentCounts[review.id] ?? 0}
               />
             ))}
           </div>

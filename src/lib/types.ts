@@ -123,9 +123,9 @@ export interface CommentReaction {
 
 export type CommentContentType = 'text' | 'gif' | 'mixed'
 
-export interface PhotoComment {
+/** Shared comment fields used by CommentSection (display-only, no target ref). */
+export interface Comment {
   id: string
-  photo_id: string
   user_id: string
   text: string | null
   created_at: string
@@ -139,7 +139,24 @@ export interface PhotoComment {
   is_liked_by_me: boolean
   reply_count: number
   reactions: CommentReaction[]
+  replies?: Comment[]
+}
+
+export interface PhotoComment extends Comment {
+  photo_id: string
   replies?: PhotoComment[]
+}
+
+export interface ReviewComment extends Comment {
+  review_id: string
+  replies?: ReviewComment[]
+}
+
+export interface AddCommentOptions {
+  text?: string
+  parentCommentId?: string | null
+  mediaUrl?: string | null
+  contentType?: CommentContentType
 }
 
 // ─── Notification types ──────────────────────────────────────────────────────

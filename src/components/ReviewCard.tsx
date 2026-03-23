@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import StarRating from './ui/StarRating'
 import ReviewEditModal from './ReviewEditModal'
+import ReviewCommentThread from './ReviewCommentThread'
 import type { Review, ReviewUpdateData } from '../lib/types'
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   onUpdate: (id: string, data: ReviewUpdateData) => Promise<{ error: string | null }>
   onDelete: (id: string) => Promise<{ error: string | null }>
   compact?: boolean
+  commentCount?: number
 }
 
 export default function ReviewCard({
@@ -21,10 +23,13 @@ export default function ReviewCard({
   onUpdate,
   onDelete,
   compact = false,
+  commentCount = 0,
 }: Props) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showComments, setShowComments] = useState(false)
+  const [localCommentCount, setLocalCommentCount] = useState(commentCount)
 
   const canEdit = isAdmin || review.user_id === currentUserId
   const visitedDate = (() => {
@@ -86,6 +91,18 @@ export default function ReviewCard({
           <span className="text-espresso-200 text-xs">·</span>
           <span className="text-xs text-espresso-300">{visitedDate}</span>
 
+          {/* Comment toggle */}
+          <span className="text-espresso-200 text-xs">·</span>
+          <button
+            onClick={() => setShowComments(!showComments)}
+            className="flex items-center gap-1 text-xs text-espresso-400 hover:text-espresso-600 font-medium transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            {localCommentCount > 0 ? localCommentCount : 'Comment'}
+          </button>
+
           {canEdit && (
             <>
               <span className="text-espresso-200 text-xs">·</span>
@@ -122,6 +139,18 @@ export default function ReviewCard({
             </>
           )}
         </div>
+
+        {/* Review comment thread */}
+        {showComments && (
+          <div className="mt-3 -mx-1 border-t border-cream-100 pt-2">
+            <ReviewCommentThread
+              reviewId={review.id}
+              currentUserId={currentUserId}
+              isAdmin={isAdmin}
+              onCommentCountChange={setLocalCommentCount}
+            />
+          </div>
+        )}
       </div>
 
       {editing && (
