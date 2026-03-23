@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { triggerPushDelivery } from '../lib/pushManager'
-import type { PhotoComment, CommentReaction, CommentContentType } from '../lib/types'
+import type { PhotoComment, CommentReaction, CommentContentType, AddCommentOptions } from '../lib/types'
 
 interface RawComment {
   id: string
@@ -24,13 +24,6 @@ interface RawReaction {
   comment_id: string
   reaction_type: string
   user_id: string
-}
-
-export interface AddCommentOptions {
-  text?: string
-  parentCommentId?: string | null
-  mediaUrl?: string | null
-  contentType?: CommentContentType
 }
 
 interface UsePhotoInteractionsReturn {
