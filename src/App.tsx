@@ -73,6 +73,7 @@ export default function App() {
               onSignInEmail={auth.signInWithEmail}
               isPublic={isPublic}
               onBrowse={isPublic ? () => window.history.back() : undefined}
+              authError={auth.authError}
             />
           ) : (
             <Navigate to="/" replace />
@@ -106,6 +107,7 @@ export default function App() {
                   onSignInGoogle={auth.signInWithGoogle}
                   onSignInEmail={auth.signInWithEmail}
                   isPublic={isPublic}
+                  authError={auth.authError}
                 />
               )
             ) : auth.status === 'pending' ? (

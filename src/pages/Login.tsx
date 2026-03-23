@@ -6,14 +6,15 @@ interface Props {
   onSignInEmail: (email: string, password: string) => Promise<{ error: string | null }>
   isPublic: boolean
   onBrowse?: () => void
+  authError?: string | null
 }
 
-export default function Login({ onSignInGoogle, onSignInEmail, isPublic, onBrowse }: Props) {
+export default function Login({ onSignInGoogle, onSignInEmail, isPublic, onBrowse, authError }: Props) {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [emailLoading, setEmailLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(authError ?? null)
 
   const handleGoogle = async () => {
     setGoogleLoading(true)
@@ -59,6 +60,10 @@ export default function Login({ onSignInGoogle, onSignInEmail, isPublic, onBrows
           <p className="text-center text-xs uppercase tracking-widest font-semibold text-espresso-400">
             Sign in to continue
           </p>
+
+          {error && (
+            <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+          )}
 
           {/* Google */}
           <button
