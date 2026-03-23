@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGallery } from '../../hooks/useGallery'
+import { useAuthGate } from '../AuthGateModal'
 import PhotoCard from './PhotoCard'
 import PhotoModal from './PhotoModal'
 import type { GalleryPhoto } from '../../lib/types'
@@ -7,10 +8,12 @@ import type { GalleryPhoto } from '../../lib/types'
 interface Props {
   currentUserId: string
   isAdmin: boolean
+  onViewOnMap?: (shopId: string) => void
 }
 
-export default function GalleryView({ currentUserId, isAdmin }: Props) {
+export default function GalleryView({ currentUserId, isAdmin, onViewOnMap }: Props) {
   const gallery = useGallery(currentUserId)
+  const { requireAuth } = useAuthGate()
   const [selectedPhoto, setSelectedPhoto] = useState<GalleryPhoto | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -76,7 +79,7 @@ export default function GalleryView({ currentUserId, isAdmin }: Props) {
               key={photo.photo_id}
               photo={photo}
               onOpen={() => setSelectedPhoto(photo)}
-              onLike={() => gallery.toggleLike(photo.photo_id)}
+              onLike={() => { if (requireAuth()) gallery.toggleLike(photo.photo_id) }}
             />
           ))}
         </div>
@@ -102,8 +105,9 @@ export default function GalleryView({ currentUserId, isAdmin }: Props) {
           currentUserId={currentUserId}
           isAdmin={isAdmin}
           onClose={() => setSelectedPhoto(null)}
-          onLike={() => gallery.toggleLike(syncedPhoto.photo_id)}
+          onLike={() => { if (requireAuth()) gallery.toggleLike(syncedPhoto.photo_id) }}
           onCommentAdded={() => gallery.refreshPhoto(syncedPhoto.photo_id)}
+          onViewOnMap={onViewOnMap ? (shopId) => { setSelectedPhoto(null); onViewOnMap(shopId) } : undefined}
         />
       )}
     </>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import StarRating from '../ui/StarRating'
 import CommentSection from './CommentSection'
@@ -6,6 +6,9 @@ import HeartIcon from './HeartIcon'
 import GifPicker from './GifPicker'
 import { Lightbox } from '../ui/PhotoGallery'
 import { usePhotoInteractions } from '../../hooks/usePhotoInteractions'
+import { useAuthGate } from '../AuthGateModal'
+import LikedByOverlay from './LikedByOverlay'
+import { fetchPhotoLikers } from '../../lib/reactionDetails'
 import type { GalleryPhoto } from '../../lib/types'
 
 interface Props {
@@ -15,6 +18,7 @@ interface Props {
   onClose: () => void
   onLike: () => void
   onCommentAdded: () => void
+  onViewOnMap?: (shopId: string) => void
 }
 
 export default function PhotoModal({
@@ -24,8 +28,10 @@ export default function PhotoModal({
   onClose,
   onLike,
   onCommentAdded,
+  onViewOnMap,
 }: Props) {
   const interactions = usePhotoInteractions(photo.photo_id, currentUserId)
+  const { requireAuth } = useAuthGate()
 
   const [showLightbox, setShowLightbox] = useState(false)
 
@@ -48,6 +54,7 @@ export default function PhotoModal({
 
   const handleMobilePost = async () => {
     if ((!mobileText.trim() && !mobileSelectedGif) || mobilePosting) return
+    if (!requireAuth()) return
     setMobilePosting(true)
     await interactions.addComment({
       text: mobileText.trim() || undefined,
@@ -70,6 +77,8 @@ export default function PhotoModal({
 
   const reviewerName = photo.reviewer_name ?? photo.reviewer_email?.split('@')[0] ?? 'Unknown'
 
+  const fetchLikers = useCallback(() => fetchPhotoLikers(photo.photo_id), [photo.photo_id])
+
   return (
     <div
       className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4 animate-fade-in"
@@ -88,7 +97,22 @@ export default function PhotoModal({
         <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 pt-4 pb-3 border-b border-cream-100">
           <div className="min-w-0">
             <p className="font-display text-sm font-semibold text-espresso-800 truncate">{photo.shop_name}</p>
-            <p className="text-xs text-espresso-400 truncate mt-0.5">{photo.shop_address}</p>
+            <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+              <p className="text-xs text-espresso-400 truncate">{photo.shop_address}</p>
+              {onViewOnMap && (
+                <button
+                  onClick={() => onViewOnMap(photo.shop_id)}
+                  className="flex-shrink-0 flex items-center gap-1 text-xs text-rose-400 hover:text-rose-500 font-medium transition-colors"
+                  aria-label="View on map"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                  Map
+                </button>
+              )}
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -149,25 +173,27 @@ export default function PhotoModal({
 
           {/* Like bar */}
           <div className="px-4 py-2.5 border-b border-cream-100 flex items-center gap-3">
-            <button
-              onClick={onLike}
-              className="flex items-center gap-1.5 group"
-              aria-label={photo.is_liked_by_me ? 'Unlike' : 'Like'}
-            >
-              <HeartIcon
-                filled={photo.is_liked_by_me}
-                className={`w-5 h-5 transition-all duration-150 group-active:scale-125 ${
-                  photo.is_liked_by_me ? 'text-rose-400' : 'text-espresso-300 group-hover:text-rose-300'
-                }`}
-              />
-              <span className={`text-sm font-medium transition-colors ${
-                photo.is_liked_by_me ? 'text-rose-400' : 'text-espresso-400'
-              }`}>
-                {photo.like_count > 0
-                  ? `${photo.like_count} ${photo.like_count === 1 ? 'like' : 'likes'}`
-                  : 'Be the first to like'}
-              </span>
-            </button>
+            <LikedByOverlay fetchUsers={fetchLikers} count={photo.like_count} label="Likes">
+              <button
+                onClick={() => { if (requireAuth()) onLike() }}
+                className="flex items-center gap-1.5 group"
+                aria-label={photo.is_liked_by_me ? 'Unlike' : 'Like'}
+              >
+                <HeartIcon
+                  filled={photo.is_liked_by_me}
+                  className={`w-5 h-5 transition-all duration-150 group-active:scale-125 ${
+                    photo.is_liked_by_me ? 'text-rose-400' : 'text-espresso-300 group-hover:text-rose-300'
+                  }`}
+                />
+                <span className={`text-sm font-medium transition-colors ${
+                  photo.is_liked_by_me ? 'text-rose-400' : 'text-espresso-400'
+                }`}>
+                  {photo.like_count > 0
+                    ? `${photo.like_count} ${photo.like_count === 1 ? 'like' : 'likes'}`
+                    : 'Be the first to like'}
+                </span>
+              </button>
+            </LikedByOverlay>
           </div>
 
           {/* Comment list — embedded */}
@@ -177,6 +203,7 @@ export default function PhotoModal({
             loading={interactions.loading}
             currentUserId={currentUserId}
             isAdmin={isAdmin}
+            requireAuth={requireAuth}
             onAdd={async opts => { await interactions.addComment(opts); onCommentAdded() }}
             onDelete={interactions.deleteComment}
             onToggleLike={interactions.toggleCommentLike}
@@ -225,7 +252,7 @@ export default function PhotoModal({
         <div className="flex-shrink-0 border-t border-cream-100 px-4 py-3 flex items-end gap-2 bg-white">
           <button
             type="button"
-            onClick={() => setMobileShowGif(prev => !prev)}
+            onClick={() => { if (requireAuth()) setMobileShowGif(prev => !prev) }}
             className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition-colors ${
               mobileShowGif ? 'bg-rose-100 text-rose-600' : 'bg-cream-100 text-espresso-500 hover:bg-cream-200'
             }`}
@@ -236,6 +263,7 @@ export default function PhotoModal({
           <textarea
             value={mobileText}
             onChange={e => setMobileText(e.target.value)}
+            onFocus={e => { if (!requireAuth()) e.target.blur() }}
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
@@ -294,7 +322,22 @@ export default function PhotoModal({
                 </div>
               </div>
               <p className="font-display text-sm font-semibold text-espresso-800 truncate">{photo.shop_name}</p>
-              <p className="text-xs text-espresso-400 truncate mt-0.5">{photo.shop_address}</p>
+              <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                <p className="text-xs text-espresso-400 truncate">{photo.shop_address}</p>
+                {onViewOnMap && (
+                  <button
+                    onClick={() => onViewOnMap(photo.shop_id)}
+                    className="flex-shrink-0 flex items-center gap-1 text-xs text-rose-400 hover:text-rose-500 font-medium transition-colors"
+                    aria-label="View on map"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    Map
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <span className="rating-coffee text-xs">
                   ☕ <StarRating value={photo.coffee_rating} size="sm" />
@@ -328,25 +371,27 @@ export default function PhotoModal({
 
           {/* Like bar */}
           <div className="px-4 py-2.5 border-b border-cream-100 flex items-center gap-3 flex-shrink-0">
-            <button
-              onClick={onLike}
-              className="flex items-center gap-1.5 group"
-              aria-label={photo.is_liked_by_me ? 'Unlike' : 'Like'}
-            >
-              <HeartIcon
-                filled={photo.is_liked_by_me}
-                className={`w-5 h-5 transition-all duration-150 group-active:scale-125 ${
-                  photo.is_liked_by_me ? 'text-rose-400' : 'text-espresso-300 group-hover:text-rose-300'
-                }`}
-              />
-              <span className={`text-sm font-medium transition-colors ${
-                photo.is_liked_by_me ? 'text-rose-400' : 'text-espresso-400'
-              }`}>
-                {photo.like_count > 0
-                  ? `${photo.like_count} ${photo.like_count === 1 ? 'like' : 'likes'}`
-                  : 'Be the first to like'}
-              </span>
-            </button>
+            <LikedByOverlay fetchUsers={fetchLikers} count={photo.like_count} label="Likes">
+              <button
+                onClick={() => { if (requireAuth()) onLike() }}
+                className="flex items-center gap-1.5 group"
+                aria-label={photo.is_liked_by_me ? 'Unlike' : 'Like'}
+              >
+                <HeartIcon
+                  filled={photo.is_liked_by_me}
+                  className={`w-5 h-5 transition-all duration-150 group-active:scale-125 ${
+                    photo.is_liked_by_me ? 'text-rose-400' : 'text-espresso-300 group-hover:text-rose-300'
+                  }`}
+                />
+                <span className={`text-sm font-medium transition-colors ${
+                  photo.is_liked_by_me ? 'text-rose-400' : 'text-espresso-400'
+                }`}>
+                  {photo.like_count > 0
+                    ? `${photo.like_count} ${photo.like_count === 1 ? 'like' : 'likes'}`
+                    : 'Be the first to like'}
+                </span>
+              </button>
+            </LikedByOverlay>
           </div>
 
           {/* Comments — standalone with scroll + input + GIF */}
@@ -356,6 +401,7 @@ export default function PhotoModal({
               loading={interactions.loading}
               currentUserId={currentUserId}
               isAdmin={isAdmin}
+              requireAuth={requireAuth}
               onAdd={async opts => {
                 await interactions.addComment(opts)
                 onCommentAdded()

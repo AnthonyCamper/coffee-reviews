@@ -105,7 +105,12 @@ self.addEventListener('pushsubscriptionchange', (event) => {
   )
 })
 
-// ── Install & activate: take control immediately ─────────────────────────────
+// ── Install & activate ────────────────────────────────────────────────────────
+// skipWaiting() forces the new service worker to activate immediately, which
+// aborts any in-flight pushManager.subscribe() calls on the old registration
+// (browser throws AbortError). We still call skipWaiting() so the latest SW
+// takes over quickly, but the client-side code in pushManager.ts now waits
+// for the activation transition to settle before calling subscribe().
 
 self.addEventListener('install', () => {
   self.skipWaiting()

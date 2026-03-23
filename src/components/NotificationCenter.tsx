@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns'
+import { supabase } from '../lib/supabase'
 import type { UseNotificationsReturn } from '../hooks/useNotifications'
 import type { Notification } from '../lib/types'
 
@@ -21,13 +22,28 @@ export default function NotificationCenter({ notifications, onClose }: Props) {
     pushSupported,
   } = notifications
 
-  const handleNotificationClick = (notif: Notification) => {
+  const handleNotificationClick = async (notif: Notification) => {
     markRead(notif.id)
     onClose()
+
+    let photoId = notif.photo_id
+    const reviewId = notif.review_id
+    const commentId = notif.comment_id
+
+    // Resolve photo_id from comment_id if missing (pre-backfill safety net)
+    if (!photoId && !reviewId && commentId) {
+      const { data } = await supabase
+        .from('photo_comments')
+        .select('photo_id')
+        .eq('id', commentId)
+        .maybeSingle()
+      if (data) photoId = data.photo_id
+    }
+
     // Navigate to the relevant content via deep-link event (no full reload)
-    if (notif.photo_id || notif.review_id) {
+    if (photoId || reviewId) {
       window.dispatchEvent(new CustomEvent('push-deep-link', {
-        detail: { photoId: notif.photo_id, reviewId: notif.review_id },
+        detail: { photoId, reviewId, commentId },
       }))
     }
   }
