@@ -1,5 +1,8 @@
+import { useCallback } from 'react'
 import type { GalleryPhoto } from '../../lib/types'
 import HeartIcon from './HeartIcon'
+import LikedByOverlay from './LikedByOverlay'
+import { fetchPhotoLikers } from '../../lib/reactionDetails'
 
 interface Props {
   photo: GalleryPhoto
@@ -8,6 +11,8 @@ interface Props {
 }
 
 export default function PhotoCard({ photo, onOpen, onLike }: Props) {
+  const fetchLikers = useCallback(() => fetchPhotoLikers(photo.photo_id), [photo.photo_id])
+
   return (
     <div className="group relative aspect-square bg-cream-100 rounded-2xl overflow-hidden cursor-pointer">
       {/* Image */}
@@ -43,20 +48,27 @@ export default function PhotoCard({ photo, onOpen, onLike }: Props) {
       </div>
 
       {/* Like button — top-right corner */}
-      <button
-        onClick={e => { e.stopPropagation(); onLike() }}
-        className="absolute top-2 right-2 flex items-center gap-1 bg-black/30 hover:bg-black/50
-                   backdrop-blur-sm rounded-full px-2 py-1 transition-colors"
-        aria-label={photo.is_liked_by_me ? 'Unlike' : 'Like'}
+      <LikedByOverlay
+        fetchUsers={fetchLikers}
+        count={photo.like_count}
+        label="Likes"
+        className="absolute top-2 right-2 inline-flex"
       >
-        <HeartIcon
-          filled={photo.is_liked_by_me}
-          className={`w-3.5 h-3.5 transition-colors ${photo.is_liked_by_me ? 'text-rose-400' : 'text-white'}`}
-        />
-        {photo.like_count > 0 && (
-          <span className="text-white text-xs font-medium">{photo.like_count}</span>
-        )}
-      </button>
+        <button
+          onClick={e => { e.stopPropagation(); onLike() }}
+          className="flex items-center gap-1 bg-black/30 hover:bg-black/50
+                     backdrop-blur-sm rounded-full px-2 py-1 transition-colors"
+          aria-label={photo.is_liked_by_me ? 'Unlike' : 'Like'}
+        >
+          <HeartIcon
+            filled={photo.is_liked_by_me}
+            className={`w-3.5 h-3.5 transition-colors ${photo.is_liked_by_me ? 'text-rose-400' : 'text-white'}`}
+          />
+          {photo.like_count > 0 && (
+            <span className="text-white text-xs font-medium">{photo.like_count}</span>
+          )}
+        </button>
+      </LikedByOverlay>
 
       {/* Comment count badge — only if > 0 */}
       {photo.comment_count > 0 && (

@@ -446,10 +446,25 @@ Deno.serve(async (req: Request) => {
 
       // Send to each subscription
       for (const notification of filteredNotifications) {
+        // Resolve photo_id from comment_id if missing (backcompat for old rows)
+        let photoId = notification.photo_id;
+        if (!photoId && notification.comment_id) {
+          const { data: commentRow } = await supabase
+            .from("photo_comments")
+            .select("photo_id")
+            .eq("id", notification.comment_id)
+            .maybeSingle();
+          if (commentRow) photoId = commentRow.photo_id;
+        }
+
         // Build deep link URL based on notification type
         let url = "/";
-        if (notification.photo_id) {
-          url = `/?photo=${notification.photo_id}`;
+        if (photoId) {
+          url = `/?photo=${photoId}`;
+          // Add comment anchor for comment-related notifications
+          if (notification.comment_id) {
+            url += `&comment=${notification.comment_id}`;
+          }
         } else if (notification.review_id) {
           url = `/?review=${notification.review_id}`;
         }

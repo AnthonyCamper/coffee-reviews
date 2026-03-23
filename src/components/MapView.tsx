@@ -15,9 +15,11 @@ interface Props {
   isAdmin: boolean
   onUpdate: (id: string, data: ReviewUpdateData) => Promise<{ error: string | null }>
   onDelete: (id: string) => Promise<{ error: string | null }>
+  focusShopId?: string | null
+  onFocusHandled?: () => void
 }
 
-export default function MapView({ shops, loading, currentUserId, isAdmin, onUpdate, onDelete }: Props) {
+export default function MapView({ shops, loading, currentUserId, isAdmin, onUpdate, onDelete, focusShopId, onFocusHandled }: Props) {
   const mapRef = useRef<HTMLDivElement>(null)
   const leafletRef = useRef<LeafletMap | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -202,6 +204,18 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, shopsWithReviews.map(s => s.shop.id).join(',')])
+
+  // ── Focus on a specific shop (triggered from list/gallery "View on Map") ──
+  useEffect(() => {
+    if (!focusShopId || !mapReady || !leafletRef.current) return
+    const shopData = shopsWithReviews.find(s => s.shop.id === focusShopId)
+    if (!shopData) return
+
+    leafletRef.current.setView([shopData.shop.lat, shopData.shop.lng], 16, { animate: true, duration: 0.5 })
+    // Small delay so the map finishes panning and markers re-render at the new viewport
+    setTimeout(() => setSelectedShop(shopData), 350)
+    onFocusHandled?.()
+  }, [focusShopId, mapReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="relative h-[calc(100dvh-64px)]">

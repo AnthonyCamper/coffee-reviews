@@ -16,9 +16,10 @@ interface Props {
   isAdmin: boolean
   onUpdate: (id: string, data: ReviewUpdateData) => Promise<{ error: string | null }>
   onDelete: (id: string) => Promise<{ error: string | null }>
+  onViewOnMap?: (shopId: string) => void
 }
 
-export default function ListView({ shops, loading, error, currentUserId, isAdmin, onUpdate, onDelete }: Props) {
+export default function ListView({ shops, loading, error, currentUserId, isAdmin, onUpdate, onDelete, onViewOnMap }: Props) {
   const [sortBy, setSortBy] = useState<SortKey>('name')
   const [filterReviewer, setFilterReviewer] = useState<string>('all')
   const [expandedShop, setExpandedShop] = useState<string | null>(null)
@@ -143,6 +144,7 @@ export default function ListView({ shops, loading, error, currentUserId, isAdmin
                 onDelete={onDelete}
                 onPhotoOpen={photoDetail.open}
                 commentCounts={commentCounts}
+                onViewOnMap={onViewOnMap}
               />
             ))}
           </div>
@@ -165,6 +167,7 @@ export default function ListView({ shops, loading, error, currentUserId, isAdmin
           onClose={photoDetail.close}
           onLike={photoDetail.toggleLike}
           onCommentAdded={photoDetail.onCommentAdded}
+          onViewOnMap={onViewOnMap ? (shopId) => { photoDetail.close(); onViewOnMap(shopId) } : undefined}
         />
       )}
     </>
@@ -187,12 +190,13 @@ interface ShopCardProps {
   onDelete: Props['onDelete']
   onPhotoOpen: (photoId: string) => void
   commentCounts: Record<string, number>
+  onViewOnMap?: (shopId: string) => void
 }
 
 function ShopCard({
-  name, address, reviews, avgCoffee, avgVibe, photos,
+  shopId, name, address, reviews, avgCoffee, avgVibe, photos,
   expanded, onToggle, currentUserId, isAdmin, onUpdate, onDelete,
-  onPhotoOpen, commentCounts,
+  onPhotoOpen, commentCounts, onViewOnMap,
 }: ShopCardProps) {
   return (
     <div className="card animate-slide-up">
@@ -205,7 +209,22 @@ function ShopCard({
           <h3 className="font-display text-base font-semibold text-espresso-800 leading-snug">
             {name}
           </h3>
-          <p className="text-xs text-espresso-400 mt-0.5 truncate">{address}</p>
+          <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+            <p className="text-xs text-espresso-400 truncate">{address}</p>
+            {onViewOnMap && (
+              <button
+                onClick={e => { e.stopPropagation(); onViewOnMap(shopId) }}
+                className="flex-shrink-0 flex items-center gap-1 text-xs text-rose-400 hover:text-rose-500 font-medium transition-colors"
+                aria-label="View on map"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span className="hidden sm:inline">Map</span>
+              </button>
+            )}
+          </div>
 
           {/* Rating summary */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">

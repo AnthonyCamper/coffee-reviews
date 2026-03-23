@@ -1,16 +1,19 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import type { PhotoComment } from '../../lib/types'
 import type { AddCommentOptions } from '../../hooks/usePhotoInteractions'
 import HeartIcon from './HeartIcon'
 import ReactionPicker from './ReactionPicker'
 import GifPicker from './GifPicker'
+import LikedByOverlay from './LikedByOverlay'
+import { fetchCommentLikers, fetchCommentReactors } from '../../lib/reactionDetails'
 
 interface Props {
   comments: PhotoComment[]
   loading: boolean
   currentUserId: string
   isAdmin: boolean
+  requireAuth?: () => boolean
   onAdd: (opts: string | AddCommentOptions) => Promise<void>
   onDelete: (commentId: string) => Promise<void>
   onToggleLike: (commentId: string) => Promise<void>
@@ -31,6 +34,7 @@ export default function CommentSection({
   loading,
   currentUserId,
   isAdmin,
+  requireAuth,
   onAdd,
   onDelete,
   onToggleLike,
@@ -40,6 +44,7 @@ export default function CommentSection({
   replyingTo: externalReplyingTo,
   onSetReplyingTo,
 }: Props) {
+  const gate = requireAuth ?? (() => true)
   const [text, setText] = useState('')
   const [posting, setPosting] = useState(false)
   const [showGifPicker, setShowGifPicker] = useState(false)
@@ -53,6 +58,7 @@ export default function CommentSection({
 
   const handlePost = async () => {
     if ((!text.trim() && !selectedGif) || posting) return
+    if (!gate()) return
     setPosting(true)
     await onAdd({
       text: text.trim() || undefined,
@@ -75,6 +81,7 @@ export default function CommentSection({
   }
 
   const handleReply = (comment: PhotoComment) => {
+    if (!gate()) return
     const name = comment.commenter_name ?? comment.commenter_email?.split('@')[0] ?? 'Unknown'
     setReplyingTo({ id: comment.parent_comment_id ?? comment.id, name })
     setShowGifPicker(false)
@@ -108,6 +115,7 @@ export default function CommentSection({
           comment={comment}
           currentUserId={currentUserId}
           isAdmin={isAdmin}
+          requireAuth={gate}
           onDelete={onDelete}
           onToggleLike={onToggleLike}
           onToggleReaction={onToggleReaction}
@@ -163,7 +171,7 @@ export default function CommentSection({
       <div className="flex-shrink-0 border-t border-cream-100 px-4 py-3 flex items-end gap-2 bg-white">
         <button
           type="button"
-          onClick={() => setShowGifPicker(prev => !prev)}
+          onClick={() => { if (gate()) setShowGifPicker(prev => !prev) }}
           className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition-colors ${
             showGifPicker ? 'bg-rose-100 text-rose-600' : 'bg-cream-100 text-espresso-500 hover:bg-cream-200'
           }`}
@@ -175,6 +183,7 @@ export default function CommentSection({
           ref={inputRef}
           value={text}
           onChange={e => setText(e.target.value)}
+          onFocus={e => { if (!gate()) e.target.blur() }}
           onKeyDown={handleKeyDown}
           placeholder={replyingTo ? `Reply to ${replyingTo.name}…` : 'Add a comment…'}
           maxLength={500}
@@ -202,6 +211,7 @@ interface CommentThreadProps {
   comment: PhotoComment
   currentUserId: string
   isAdmin: boolean
+  requireAuth: () => boolean
   onDelete: (id: string) => Promise<void>
   onToggleLike: (id: string) => Promise<void>
   onToggleReaction: (id: string, type: string) => Promise<void>
@@ -213,6 +223,7 @@ function CommentThread({
   comment,
   currentUserId,
   isAdmin,
+  requireAuth,
   onDelete,
   onToggleLike,
   onToggleReaction,
@@ -239,6 +250,7 @@ function CommentThread({
         comment={comment}
         currentUserId={currentUserId}
         isAdmin={isAdmin}
+        requireAuth={requireAuth}
         onDelete={onDelete}
         onToggleLike={onToggleLike}
         onToggleReaction={onToggleReaction}
@@ -272,6 +284,7 @@ function CommentThread({
               comment={reply}
               currentUserId={currentUserId}
               isAdmin={isAdmin}
+              requireAuth={requireAuth}
               onDelete={onDelete}
               onToggleLike={onToggleLike}
               onToggleReaction={onToggleReaction}
@@ -293,6 +306,7 @@ interface CommentItemProps {
   comment: PhotoComment
   currentUserId: string
   isAdmin: boolean
+  requireAuth: () => boolean
   onDelete: (id: string) => Promise<void>
   onToggleLike: (id: string) => Promise<void>
   onToggleReaction: (id: string, type: string) => Promise<void>
@@ -300,10 +314,14 @@ interface CommentItemProps {
   isReply?: boolean
 }
 
-function CommentItem({ comment, currentUserId, isAdmin, onDelete, onToggleLike, onToggleReaction, onReply, isReply }: CommentItemProps) {
+function CommentItem({ comment, currentUserId, isAdmin, requireAuth, onDelete, onToggleLike, onToggleReaction, onReply, isReply }: CommentItemProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const canDelete = comment.user_id === currentUserId || isAdmin
   const isTemp = comment.id.startsWith('temp-')
+
+  const fetchLikers = useCallback(() => fetchCommentLikers(comment.id), [comment.id])
+  const fetchReactors = useCallback(() => fetchCommentReactors(comment.id), [comment.id])
+  const totalReactionCount = comment.reactions.reduce((sum, r) => sum + r.count, 0)
 
   const name = comment.commenter_name ?? comment.commenter_email?.split('@')[0] ?? 'Unknown'
   const timeAgo = (() => {
@@ -369,7 +387,7 @@ function CommentItem({ comment, currentUserId, isAdmin, onDelete, onToggleLike, 
           {/* Reply */}
           {!isTemp && (
             <button
-              onClick={onReply}
+              onClick={() => { if (requireAuth()) onReply() }}
               className="text-xs text-espresso-400 hover:text-espresso-600 font-medium transition-colors"
             >
               Reply
@@ -377,30 +395,34 @@ function CommentItem({ comment, currentUserId, isAdmin, onDelete, onToggleLike, 
           )}
 
           {/* Like */}
-          <button
-            onClick={() => !isTemp && onToggleLike(comment.id)}
-            disabled={isTemp}
-            className="flex items-center gap-1 text-xs transition-colors group"
-          >
-            <HeartIcon
-              filled={comment.is_liked_by_me}
-              className={`w-3.5 h-3.5 transition-all group-active:scale-125 ${
-                comment.is_liked_by_me ? 'text-rose-400' : 'text-espresso-300 group-hover:text-rose-300'
-              }`}
-            />
-            {comment.like_count > 0 && (
-              <span className={`${comment.is_liked_by_me ? 'text-rose-400' : 'text-espresso-300'}`}>
-                {comment.like_count}
-              </span>
-            )}
-          </button>
+          <LikedByOverlay fetchUsers={fetchLikers} count={comment.like_count} label="Likes">
+            <button
+              onClick={() => { if (!isTemp && requireAuth()) onToggleLike(comment.id) }}
+              disabled={isTemp}
+              className="flex items-center gap-1 text-xs transition-colors group"
+            >
+              <HeartIcon
+                filled={comment.is_liked_by_me}
+                className={`w-3.5 h-3.5 transition-all group-active:scale-125 ${
+                  comment.is_liked_by_me ? 'text-rose-400' : 'text-espresso-300 group-hover:text-rose-300'
+                }`}
+              />
+              {comment.like_count > 0 && (
+                <span className={`${comment.is_liked_by_me ? 'text-rose-400' : 'text-espresso-300'}`}>
+                  {comment.like_count}
+                </span>
+              )}
+            </button>
+          </LikedByOverlay>
 
           {/* Reactions */}
-          <ReactionPicker
-            reactions={comment.reactions}
-            onToggle={type => !isTemp && onToggleReaction(comment.id, type)}
-            disabled={isTemp}
-          />
+          <LikedByOverlay fetchUsers={fetchReactors} count={totalReactionCount} label="Reactions">
+            <ReactionPicker
+              reactions={comment.reactions}
+              onToggle={type => { if (!isTemp && requireAuth()) onToggleReaction(comment.id, type) }}
+              disabled={isTemp}
+            />
+          </LikedByOverlay>
         </div>
       </div>
     </div>

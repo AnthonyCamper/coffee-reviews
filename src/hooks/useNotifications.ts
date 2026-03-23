@@ -166,9 +166,10 @@ export function useNotifications(userId: string | undefined): UseNotificationsRe
           const parsed = new URL(url, window.location.origin)
           const photoId = parsed.searchParams.get('photo')
           const reviewId = parsed.searchParams.get('review')
+          const commentId = parsed.searchParams.get('comment')
           if (photoId || reviewId) {
             window.dispatchEvent(new CustomEvent('push-deep-link', {
-              detail: { photoId, reviewId },
+              detail: { photoId, reviewId, commentId },
             }))
           } else if (url !== window.location.pathname + window.location.search) {
             window.location.href = url

@@ -8,6 +8,7 @@ import MapView from '../components/MapView'
 import GalleryView from '../components/gallery/GalleryView'
 import PhotoModal from '../components/gallery/PhotoModal'
 import ReviewFormModal from '../components/ReviewFormModal'
+import { AuthGateProvider } from '../components/AuthGateModal'
 import type { AuthState } from '../hooks/useAuth'
 
 type HomeProps = { auth: AuthState; readOnly?: boolean }
@@ -16,6 +17,7 @@ export default function Home({ auth, readOnly = false }: HomeProps) {
   const reviews = useReviews()
   const [view, setView] = useState<'list' | 'map' | 'gallery'>('list')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [focusShopId, setFocusShopId] = useState<string | null>(null)
   const deepLinkHandled = useRef(false)
 
   // Deep link photo detail (opened from notification clicks / URL params)
@@ -27,6 +29,8 @@ export default function Home({ auth, readOnly = false }: HomeProps) {
     const params = new URLSearchParams(window.location.search)
     const photoId = params.get('photo')
     const reviewId = params.get('review')
+    // commentId is available for future comment-level highlighting
+    // const commentId = params.get('comment')
 
     if (photoId) {
       deepLinkHandled.current = true
@@ -71,7 +75,15 @@ export default function Home({ auth, readOnly = false }: HomeProps) {
     return () => window.removeEventListener('push-deep-link', handler)
   }, [deepLinkPhoto.open]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleViewOnMap = (shopId: string) => {
+    setFocusShopId(shopId)
+    setView('map')
+  }
+
+  const isAuthenticated = !!auth.user
+
   return (
+    <AuthGateProvider isAuthenticated={isAuthenticated} onSignInGoogle={auth.signInWithGoogle}>
     <Layout
       auth={auth}
       view={view}
@@ -94,6 +106,7 @@ export default function Home({ auth, readOnly = false }: HomeProps) {
           isAdmin={auth.isAdmin}
           onUpdate={reviews.updateReview}
           onDelete={reviews.deleteReview}
+          onViewOnMap={handleViewOnMap}
         />
       )}
       {view === 'map' && (
@@ -104,12 +117,15 @@ export default function Home({ auth, readOnly = false }: HomeProps) {
           isAdmin={auth.isAdmin}
           onUpdate={reviews.updateReview}
           onDelete={reviews.deleteReview}
+          focusShopId={focusShopId}
+          onFocusHandled={() => setFocusShopId(null)}
         />
       )}
       {view === 'gallery' && (
         <GalleryView
           currentUserId={auth.user?.id ?? ''}
           isAdmin={auth.isAdmin}
+          onViewOnMap={handleViewOnMap}
         />
       )}
 
@@ -138,8 +154,10 @@ export default function Home({ auth, readOnly = false }: HomeProps) {
           onClose={deepLinkPhoto.close}
           onLike={deepLinkPhoto.toggleLike}
           onCommentAdded={deepLinkPhoto.onCommentAdded}
+          onViewOnMap={(shopId) => { deepLinkPhoto.close(); handleViewOnMap(shopId) }}
         />
       )}
     </Layout>
+    </AuthGateProvider>
   )
 }
