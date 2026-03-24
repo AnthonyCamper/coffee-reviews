@@ -337,7 +337,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Auth: extract user from JWT
+    // Auth: extract and validate user JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -348,6 +348,17 @@ Deno.serve(async (req: Request) => {
 
     // Use service role client for reading subscriptions & updating notifications
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Validate the caller's JWT using the anon client
+    const anonClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "");
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await anonClient.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Parse request body
     const body = await req.json().catch(() => ({}));

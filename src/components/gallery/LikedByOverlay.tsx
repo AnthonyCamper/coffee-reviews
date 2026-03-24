@@ -19,11 +19,8 @@ export default function LikedByOverlay({
 }: Props) {
   const [users, setUsers] = useState<ReactionUser[] | null>(null)
   const [loading, setLoading] = useState(false)
-  const [showTooltip, setShowTooltip] = useState(false)
   const [showSheet, setShowSheet] = useState(false)
-  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 })
   const triggerRef = useRef<HTMLDivElement>(null)
-  const hoverTimer = useRef<ReturnType<typeof setTimeout>>()
   const pressTimer = useRef<ReturnType<typeof setTimeout>>()
   const touchStart = useRef({ x: 0, y: 0 })
   const didLongPress = useRef(false)
@@ -41,27 +38,6 @@ export default function LikedByOverlay({
       setLoading(false)
     }
   }, [fetchUsers, count, users])
-
-  // Desktop hover
-  const handleMouseEnter = useCallback(() => {
-    if (count === 0) return
-    hoverTimer.current = setTimeout(async () => {
-      await loadUsers()
-      if (triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect()
-        setTooltipPos({
-          top: rect.top - 8,
-          left: rect.left + rect.width / 2,
-        })
-      }
-      setShowTooltip(true)
-    }, 250)
-  }, [count, loadUsers])
-
-  const handleMouseLeave = useCallback(() => {
-    clearTimeout(hoverTimer.current)
-    setShowTooltip(false)
-  }, [])
 
   // Mobile long press
   const handleTouchStart = useCallback(
@@ -98,7 +74,6 @@ export default function LikedByOverlay({
 
   useEffect(() => {
     return () => {
-      clearTimeout(hoverTimer.current)
       clearTimeout(pressTimer.current)
     }
   }, [])
@@ -136,8 +111,6 @@ export default function LikedByOverlay({
     <>
       <div
         ref={triggerRef}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -146,69 +119,7 @@ export default function LikedByOverlay({
         {children}
       </div>
 
-      {/* Desktop tooltip */}
-      {showTooltip &&
-        users &&
-        users.length > 0 &&
-        createPortal(
-          <div
-            className="fixed z-[200] pointer-events-none"
-            style={{
-              top: tooltipPos.top,
-              left: tooltipPos.left,
-              transform: 'translate(-50%, -100%)',
-            }}
-          >
-            <div className="bg-espresso-800 text-white rounded-xl px-3 py-2 shadow-lg text-xs max-w-[240px] relative">
-              <p className="font-medium text-white/50 text-[10px] uppercase tracking-wide mb-1.5">
-                {label}
-              </p>
-              {hasReactionTypes ? (
-                <div className="space-y-1.5">
-                  {Object.entries(groupedByReaction!).map(([type, typeUsers]) => (
-                    <div key={type}>
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <span className="text-sm">{type}</span>
-                        <span className="text-white/70">
-                          {typeUsers
-                            .slice(0, 4)
-                            .map(u => u.name)
-                            .join(', ')}
-                          {typeUsers.length > 4 && ` +${typeUsers.length - 4}`}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {users.slice(0, 6).map((u, i) => (
-                    <div key={i} className="flex items-center gap-1.5">
-                      <div className="w-4 h-4 rounded-full bg-espresso-600 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                        {u.avatar ? (
-                          <img src={u.avatar} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-[8px] text-white font-medium">
-                            {u.name.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <span className="truncate">{u.name}</span>
-                    </div>
-                  ))}
-                  {users.length > 6 && (
-                    <p className="text-white/50 text-[10px]">+{users.length - 6} more</p>
-                  )}
-                </div>
-              )}
-              {/* Arrow */}
-              <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-espresso-800 rotate-45" />
-            </div>
-          </div>,
-          document.body
-        )}
-
-      {/* Mobile bottom sheet */}
+      {/* Bottom sheet — unified for desktop and mobile */}
       {showSheet &&
         createPortal(
           <div
