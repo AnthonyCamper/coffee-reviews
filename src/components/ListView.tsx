@@ -3,7 +3,7 @@ import StarRating from './ui/StarRating'
 import ReviewCard from './ReviewCard'
 import PhotoGallery from './ui/PhotoGallery'
 import PhotoModal from './gallery/PhotoModal'
-import { usePhotoDetail, fetchCommentCounts } from '../hooks/usePhotoDetail'
+import { usePhotoDetail } from '../hooks/usePhotoDetail'
 import { fetchReviewCommentCounts } from '../hooks/useReviewComments'
 import type { ShopWithReviews, Review, ReviewPhoto, ReviewUpdateData } from '../lib/types'
 
@@ -26,15 +26,10 @@ export default function ListView({ shops, loading, error, currentUserId, isAdmin
   const [expandedShop, setExpandedShop] = useState<string | null>(null)
 
   const photoDetail = usePhotoDetail(currentUserId)
-  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
   const [reviewCommentCounts, setReviewCommentCounts] = useState<Record<string, number>>({})
 
-  // Fetch comment counts for all photos and reviews
+  // Fetch comment counts for all reviews
   useEffect(() => {
-    const allPhotoIds = shops.flatMap(s => s.photos.map(p => p.id))
-    if (allPhotoIds.length > 0) {
-      fetchCommentCounts(allPhotoIds).then(setCommentCounts)
-    }
     const allReviewIds = shops.flatMap(s => s.reviews.map(r => r.id))
     if (allReviewIds.length > 0) {
       fetchReviewCommentCounts(allReviewIds).then(setReviewCommentCounts)
@@ -149,7 +144,6 @@ export default function ListView({ shops, loading, error, currentUserId, isAdmin
                 onUpdate={onUpdate}
                 onDelete={onDelete}
                 onPhotoOpen={photoDetail.open}
-                commentCounts={commentCounts}
                 reviewCommentCounts={reviewCommentCounts}
                 onViewOnMap={onViewOnMap}
               />
@@ -196,7 +190,6 @@ interface ShopCardProps {
   onUpdate: Props['onUpdate']
   onDelete: Props['onDelete']
   onPhotoOpen: (photoId: string) => void
-  commentCounts: Record<string, number>
   reviewCommentCounts: Record<string, number>
   onViewOnMap?: (shopId: string) => void
 }
@@ -204,7 +197,7 @@ interface ShopCardProps {
 function ShopCard({
   shopId, name, address, reviews, avgCoffee, avgVibe, photos,
   expanded, onToggle, currentUserId, isAdmin, onUpdate, onDelete,
-  onPhotoOpen, commentCounts, reviewCommentCounts, onViewOnMap,
+  onPhotoOpen, reviewCommentCounts, onViewOnMap,
 }: ShopCardProps) {
   return (
     <div className="card animate-slide-up">
@@ -300,7 +293,6 @@ function ShopCard({
               <PhotoGallery
                 photos={photos}
                 onPhotoOpen={onPhotoOpen}
-                commentCounts={commentCounts}
               />
             </div>
           )}

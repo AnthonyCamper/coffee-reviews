@@ -5,10 +5,10 @@ import CommentSection from './CommentSection'
 import HeartIcon from './HeartIcon'
 import GifPicker from './GifPicker'
 import { Lightbox } from '../ui/PhotoGallery'
-import { usePhotoInteractions } from '../../hooks/usePhotoInteractions'
+import { useReviewComments } from '../../hooks/useReviewComments'
 import { useAuthGate } from '../AuthGateModal'
 import LikedByOverlay from './LikedByOverlay'
-import { fetchPhotoLikers } from '../../lib/reactionDetails'
+import { fetchPhotoLikers, fetchReviewCommentLikers, fetchReviewCommentReactors } from '../../lib/reactionDetails'
 import type { GalleryPhoto } from '../../lib/types'
 
 interface Props {
@@ -30,7 +30,15 @@ export default function PhotoModal({
   onCommentAdded,
   onViewOnMap,
 }: Props) {
-  const interactions = usePhotoInteractions(photo.photo_id, currentUserId)
+  const {
+    comments,
+    loading: commentsLoading,
+    addComment,
+    deleteComment,
+    toggleCommentLike,
+    toggleReaction,
+    fetchReplies,
+  } = useReviewComments(photo.review_id, currentUserId)
   const { requireAuth } = useAuthGate()
 
   const [showLightbox, setShowLightbox] = useState(false)
@@ -56,7 +64,7 @@ export default function PhotoModal({
     if ((!mobileText.trim() && !mobileSelectedGif) || mobilePosting) return
     if (!requireAuth()) return
     setMobilePosting(true)
-    await interactions.addComment({
+    await addComment({
       text: mobileText.trim() || undefined,
       parentCommentId: mobileReplyingTo?.id ?? null,
       mediaUrl: mobileSelectedGif ?? undefined,
@@ -199,16 +207,18 @@ export default function PhotoModal({
           {/* Comment list — embedded */}
           <CommentSection
             embedded
-            comments={interactions.comments}
-            loading={interactions.loading}
+            comments={comments}
+            loading={commentsLoading}
             currentUserId={currentUserId}
             isAdmin={isAdmin}
             requireAuth={requireAuth}
-            onAdd={async opts => { await interactions.addComment(opts); onCommentAdded() }}
-            onDelete={interactions.deleteComment}
-            onToggleLike={interactions.toggleCommentLike}
-            onToggleReaction={interactions.toggleReaction}
-            onFetchReplies={interactions.fetchReplies}
+            onAdd={async opts => { await addComment(opts); onCommentAdded() }}
+            onDelete={deleteComment}
+            onToggleLike={toggleCommentLike}
+            onToggleReaction={toggleReaction}
+            onFetchReplies={fetchReplies}
+            likersFetcher={fetchReviewCommentLikers}
+            reactorsFetcher={fetchReviewCommentReactors}
             replyingTo={mobileReplyingTo}
             onSetReplyingTo={setMobileReplyingTo}
           />
@@ -397,19 +407,21 @@ export default function PhotoModal({
           {/* Comments — standalone with scroll + input + GIF */}
           <div className="flex-1 min-h-0 flex flex-col">
             <CommentSection
-              comments={interactions.comments}
-              loading={interactions.loading}
+              comments={comments}
+              loading={commentsLoading}
               currentUserId={currentUserId}
               isAdmin={isAdmin}
               requireAuth={requireAuth}
               onAdd={async opts => {
-                await interactions.addComment(opts)
+                await addComment(opts)
                 onCommentAdded()
               }}
-              onDelete={interactions.deleteComment}
-              onToggleLike={interactions.toggleCommentLike}
-              onToggleReaction={interactions.toggleReaction}
-              onFetchReplies={interactions.fetchReplies}
+              onDelete={deleteComment}
+              onToggleLike={toggleCommentLike}
+              onToggleReaction={toggleReaction}
+              onFetchReplies={fetchReplies}
+              likersFetcher={fetchReviewCommentLikers}
+              reactorsFetcher={fetchReviewCommentReactors}
             />
           </div>
         </div>

@@ -5,7 +5,7 @@ import StarRating from './ui/StarRating'
 import ReviewCard from './ReviewCard'
 import PhotoModal from './gallery/PhotoModal'
 import { Lightbox } from './ui/PhotoGallery'
-import { usePhotoDetail, fetchCommentCounts } from '../hooks/usePhotoDetail'
+import { usePhotoDetail } from '../hooks/usePhotoDetail'
 import { fetchReviewCommentCounts } from '../hooks/useReviewComments'
 import type { ShopWithReviews, Review, ReviewPhoto, ReviewUpdateData } from '../lib/types'
 
@@ -31,7 +31,6 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
   const [selectedShop, setSelectedShop] = useState<ShopWithReviews | null>(null)
 
   const photoDetail = usePhotoDetail(currentUserId)
-  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
   const [reviewCommentCounts, setReviewCommentCounts] = useState<Record<string, number>>({})
 
   const shopsWithReviews = shops.filter(s => s.reviews.length > 0)
@@ -41,12 +40,8 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
   const shopsRef = useRef(shopsWithReviews)
   useEffect(() => { shopsRef.current = shopsWithReviews })
 
-  // Fetch comment counts for all photos and reviews
+  // Fetch comment counts for all reviews
   useEffect(() => {
-    const allPhotoIds = shopsWithReviews.flatMap(s => s.photos.map(p => p.id))
-    if (allPhotoIds.length > 0) {
-      fetchCommentCounts(allPhotoIds).then(setCommentCounts)
-    }
     const allReviewIds = shopsWithReviews.flatMap(s => s.reviews.map(r => r.id))
     if (allReviewIds.length > 0) {
       fetchReviewCommentCounts(allReviewIds).then(setReviewCommentCounts)
@@ -252,7 +247,6 @@ export default function MapView({ shops, loading, currentUserId, isAdmin, onUpda
           onUpdate={onUpdate}
           onDelete={onDelete}
           onPhotoOpen={photoDetail.open}
-          commentCounts={commentCounts}
           reviewCommentCounts={reviewCommentCounts}
         />
       )}
@@ -383,11 +377,10 @@ interface ShopPanelProps {
   onUpdate: Props['onUpdate']
   onDelete: Props['onDelete']
   onPhotoOpen: (photoId: string) => void
-  commentCounts: Record<string, number>
   reviewCommentCounts: Record<string, number>
 }
 
-function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDelete, onPhotoOpen, commentCounts, reviewCommentCounts }: ShopPanelProps) {
+function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDelete, onPhotoOpen, reviewCommentCounts }: ShopPanelProps) {
   const { shop, reviews, avg_coffee, avg_vibe, photos } = shopData
 
   return (
@@ -440,7 +433,7 @@ function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDele
           {/* Photo strip */}
           {photos.length > 0 && (
             <div className="px-5 pt-4 pb-2">
-              <PhotoStrip photos={photos} onPhotoOpen={onPhotoOpen} commentCounts={commentCounts} />
+              <PhotoStrip photos={photos} onPhotoOpen={onPhotoOpen} />
             </div>
           )}
 
@@ -468,35 +461,23 @@ function ShopPanel({ shopData, onClose, currentUserId, isAdmin, onUpdate, onDele
 interface PhotoStripProps {
   photos: ReviewPhoto[]
   onPhotoOpen: (photoId: string) => void
-  commentCounts: Record<string, number>
 }
 
-function PhotoStrip({ photos, onPhotoOpen, commentCounts }: PhotoStripProps) {
+function PhotoStrip({ photos, onPhotoOpen }: PhotoStripProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   return (
     <>
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        {photos.map((photo) => {
-          const count = commentCounts[photo.id] ?? 0
-          return (
+        {photos.map((photo) => (
             <button
               key={photo.id}
               onClick={() => onPhotoOpen(photo.id)}
               className="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-cream-100 hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-rose-300"
             >
               <img src={photo.url} alt="" className="w-full h-full object-cover" loading="lazy" />
-              {count > 0 && (
-                <div className="absolute top-1 left-1 flex items-center gap-0.5 bg-black/40 backdrop-blur-sm rounded-full px-1 py-0.5">
-                  <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <span className="text-white text-[9px] font-medium">{count}</span>
-                </div>
-              )}
             </button>
-          )
-        })}
+        ))}
       </div>
 
       {lightboxIndex !== null && (
