@@ -4,6 +4,11 @@ import toast from 'react-hot-toast'
 import StarRating from './ui/StarRating'
 import ReviewEditModal from './ReviewEditModal'
 import ReviewCommentThread from './ReviewCommentThread'
+import ReactionPicker from './gallery/ReactionPicker'
+import LikedByOverlay from './gallery/LikedByOverlay'
+import { useReviewReactions } from '../hooks/useReviewReactions'
+import { useAuthGate } from './AuthGateModal'
+import { fetchReviewReactors } from '../lib/reactionDetails'
 import type { Review, ReviewUpdateData } from '../lib/types'
 
 interface Props {
@@ -30,6 +35,10 @@ export default function ReviewCard({
   const [deleting, setDeleting] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [localCommentCount, setLocalCommentCount] = useState(commentCount)
+
+  const { requireAuth } = useAuthGate()
+  const { reactions, toggleReaction } = useReviewReactions(review.id, currentUserId)
+  const totalReactionCount = reactions.reduce((sum, r) => sum + r.count, 0)
 
   const canEdit = isAdmin || review.user_id === currentUserId
   const visitedDate = (() => {
@@ -138,6 +147,16 @@ export default function ReviewCard({
               )}
             </>
           )}
+        </div>
+
+        {/* Reactions */}
+        <div className="mt-2 group">
+          <LikedByOverlay fetchUsers={() => fetchReviewReactors(review.id)} count={totalReactionCount} label="Reactions">
+            <ReactionPicker
+              reactions={reactions}
+              onToggle={type => { if (requireAuth()) toggleReaction(type) }}
+            />
+          </LikedByOverlay>
         </div>
 
         {/* Review comment thread */}
