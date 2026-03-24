@@ -142,11 +142,6 @@ export interface Comment {
   replies?: Comment[]
 }
 
-export interface PhotoComment extends Comment {
-  photo_id: string
-  replies?: PhotoComment[]
-}
-
 export interface ReviewComment extends Comment {
   review_id: string
   replies?: ReviewComment[]

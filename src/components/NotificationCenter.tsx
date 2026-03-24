@@ -30,14 +30,19 @@ export default function NotificationCenter({ notifications, onClose }: Props) {
     const reviewId = notif.review_id
     const commentId = notif.comment_id
 
-    // Resolve photo_id from comment_id if missing (pre-backfill safety net)
+    // Resolve review_id from comment_id if missing
     if (!photoId && !reviewId && commentId) {
       const { data } = await supabase
-        .from('photo_comments')
-        .select('photo_id')
+        .from('review_comments')
+        .select('review_id')
         .eq('id', commentId)
         .maybeSingle()
-      if (data) photoId = data.photo_id
+      if (data) {
+        window.dispatchEvent(new CustomEvent('push-deep-link', {
+          detail: { reviewId: data.review_id, commentId },
+        }))
+        return
+      }
     }
 
     // Navigate to the relevant content via deep-link event (no full reload)

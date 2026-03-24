@@ -6,7 +6,7 @@ import HeartIcon from './HeartIcon'
 import ReactionPicker from './ReactionPicker'
 import GifPicker from './GifPicker'
 import LikedByOverlay from './LikedByOverlay'
-import { fetchCommentLikers, fetchCommentReactors } from '../../lib/reactionDetails'
+import { fetchReviewCommentLikers, fetchReviewCommentReactors } from '../../lib/reactionDetails'
 
 type UserFetcher = (id: string) => Promise<ReactionUser[]>
 
@@ -21,9 +21,9 @@ interface Props {
   onToggleLike: (commentId: string) => Promise<void>
   onToggleReaction: (commentId: string, reactionType: string) => Promise<void>
   onFetchReplies: (parentId: string) => Promise<Comment[]>
-  /** Override the default photo-comment likers fetcher (e.g. for review comments). */
+  /** Override the default likers fetcher. */
   likersFetcher?: UserFetcher
-  /** Override the default photo-comment reactors fetcher (e.g. for review comments). */
+  /** Override the default reactors fetcher. */
   reactorsFetcher?: UserFetcher
   /**
    * Embedded mode: renders only the comment list items without a scroll
@@ -52,8 +52,8 @@ export default function CommentSection({
   replyingTo: externalReplyingTo,
   onSetReplyingTo,
 }: Props) {
-  const getLikers = likersFetcher ?? fetchCommentLikers
-  const getReactors = reactorsFetcher ?? fetchCommentReactors
+  const getLikers = likersFetcher ?? fetchReviewCommentLikers
+  const getReactors = reactorsFetcher ?? fetchReviewCommentReactors
   const gate = requireAuth ?? (() => true)
   const [text, setText] = useState('')
   const [posting, setPosting] = useState(false)
