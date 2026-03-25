@@ -390,11 +390,14 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!notifications?.length) {
+      console.log("[send-push] No pending notifications found");
       return new Response(
-        JSON.stringify({ sent: 0 }),
+        JSON.stringify({ sent: 0, reason: "no_pending_notifications" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log(`[send-push] Processing ${notifications.length} notifications for ${new Set(notifications.map((n: { recipient_id: string }) => n.recipient_id)).size} recipients`);
 
     // Group by recipient
     const byRecipient = new Map<string, typeof notifications>();
@@ -478,6 +481,9 @@ Deno.serve(async (req: Request) => {
           }
         } else if (reviewId) {
           url = `/?review=${reviewId}`;
+          if (notification.comment_id) {
+            url += `&comment=${notification.comment_id}`;
+          }
         }
 
         const pushPayload = {
@@ -504,8 +510,10 @@ Deno.serve(async (req: Request) => {
             );
 
             if (result.gone) {
+              console.log(`[send-push] Subscription ${sub.id} gone (${result.statusCode}), will delete`);
               subscriptionsToDelete.push(sub.id);
             } else if (!result.success) {
+              console.warn(`[send-push] Push failed for sub ${sub.id}: HTTP ${result.statusCode}`);
               subscriptionsToIncFailure.push(sub.id);
             } else {
               // Reset failure count on success
@@ -563,11 +571,14 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    console.log(`[send-push] Done: sent=${totalSent}, processed=${notificationsMarkedSent.length}, deleted=${subscriptionsToDelete.length}, failures=${subscriptionsToIncFailure.length}`);
+
     return new Response(
       JSON.stringify({ sent: totalSent, processed: notificationsMarkedSent.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    console.error("[send-push] Unhandled error:", err instanceof Error ? err.message : err);
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -582,7 +593,7 @@ function getNotificationTitle(notification: { type: string; shop_name?: string }
         ? `New review at ${notification.shop_name}`
         : "New review posted";
     case "photo_comment":
-      return "New comment on your photo";
+      return "New comment on your review";
     case "comment_reply":
       return "New reply in a thread";
     case "photo_like":
