@@ -9,16 +9,19 @@ interface Props {
 
 export default function Modal({ title, onClose, children, size = 'md' }: Props) {
   // Lock body scroll while modal is open (prevents double-scroll on iOS)
+  // Saves and restores scroll position to prevent the jump caused by position:fixed
   useEffect(() => {
-    const prev = document.body.style.overflow
+    const scrollY = window.scrollY
     document.body.style.overflow = 'hidden'
-    // Also prevent body from moving on iOS
     document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
     document.body.style.width = '100%'
     return () => {
-      document.body.style.overflow = prev
+      document.body.style.overflow = ''
       document.body.style.position = ''
+      document.body.style.top = ''
       document.body.style.width = ''
+      window.scrollTo(0, scrollY)
     }
   }, [])
 
