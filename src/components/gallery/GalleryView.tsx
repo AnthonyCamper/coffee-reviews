@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGallery } from '../../hooks/useGallery'
+import { useHistoryModal } from '../../hooks/useHistoryModal'
 import { useAuthGate } from '../AuthGateModal'
 import PhotoCard from './PhotoCard'
 import PhotoModal from './PhotoModal'
@@ -16,6 +17,9 @@ export default function GalleryView({ currentUserId, isAdmin, onViewOnMap }: Pro
   const { requireAuth } = useAuthGate()
   const [selectedPhoto, setSelectedPhoto] = useState<GalleryPhoto | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
+
+  // Browser back / swipe-back closes the photo modal
+  useHistoryModal(!!selectedPhoto, () => setSelectedPhoto(null))
 
   // Infinite scroll via IntersectionObserver
   useEffect(() => {

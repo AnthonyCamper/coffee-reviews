@@ -4,6 +4,7 @@ import ReviewCard from './ReviewCard'
 import PhotoGallery from './ui/PhotoGallery'
 import PhotoModal from './gallery/PhotoModal'
 import { usePhotoDetail } from '../hooks/usePhotoDetail'
+import { useHistoryModal } from '../hooks/useHistoryModal'
 import { fetchReviewCommentCounts } from '../hooks/useReviewComments'
 import type { ShopWithReviews, Review, ReviewPhoto, ReviewUpdateData } from '../lib/types'
 
@@ -18,15 +19,25 @@ interface Props {
   onUpdate: (id: string, data: ReviewUpdateData) => Promise<{ error: string | null }>
   onDelete: (id: string) => Promise<{ error: string | null }>
   onViewOnMap?: (shopId: string) => void
+  sortBy: SortKey
+  onSortChange: (sort: SortKey) => void
+  filterReviewer: string
+  onFilterChange: (reviewer: string) => void
+  expandedShop: string | null
+  onExpandShop: (shopId: string | null) => void
 }
 
-export default function ListView({ shops, loading, error, currentUserId, isAdmin, onUpdate, onDelete, onViewOnMap }: Props) {
-  const [sortBy, setSortBy] = useState<SortKey>('name')
-  const [filterReviewer, setFilterReviewer] = useState<string>('all')
-  const [expandedShop, setExpandedShop] = useState<string | null>(null)
+export default function ListView({
+  shops, loading, error, currentUserId, isAdmin, onUpdate, onDelete, onViewOnMap,
+  sortBy, onSortChange: setSortBy, filterReviewer, onFilterChange: setFilterReviewer,
+  expandedShop, onExpandShop: setExpandedShop,
+}: Props) {
 
   const photoDetail = usePhotoDetail(currentUserId)
   const [reviewCommentCounts, setReviewCommentCounts] = useState<Record<string, number>>({})
+
+  // Browser back / swipe-back closes the photo detail modal
+  useHistoryModal(!!photoDetail.photo, photoDetail.close)
 
   // Fetch comment counts for all reviews
   useEffect(() => {

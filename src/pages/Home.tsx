@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useReviews } from '../hooks/useReviews'
 import { usePhotoDetail } from '../hooks/usePhotoDetail'
+import { useHistoryModal } from '../hooks/useHistoryModal'
 import Layout from '../components/Layout'
 import ListView from '../components/ListView'
 import MapView from '../components/MapView'
@@ -11,36 +13,72 @@ import ReviewFormModal from '../components/ReviewFormModal'
 import { AuthGateProvider } from '../components/AuthGateModal'
 import type { AuthState } from '../hooks/useAuth'
 
+type View = 'list' | 'map' | 'gallery'
+type SortKey = 'name' | 'coffee' | 'vibe'
+
 type HomeProps = { auth: AuthState; readOnly?: boolean }
 
 export default function Home({ auth, readOnly = false }: HomeProps) {
   const reviews = useReviews()
-  const [view, setView] = useState<'list' | 'map' | 'gallery'>('list')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [showAddModal, setShowAddModal] = useState(false)
   const [focusShopId, setFocusShopId] = useState<string | null>(null)
   const deepLinkHandled = useRef(false)
 
-  // Deep link photo detail (opened from notification clicks / URL params)
+  // ── View state from URL ──────────────────────────────────────────────
+  const view = (searchParams.get('view') as View) || 'list'
+
+  const setView = useCallback((newView: View) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (newView === 'list') next.delete('view')
+      else next.set('view', newView)
+      return next
+    })
+  }, [setSearchParams])
+
+  // ── Lifted list-view state (persists across view switches) ───────────
+  const [listSort, setListSort] = useState<SortKey>('name')
+  const [listFilter, setListFilter] = useState<string>('all')
+  const [listExpandedShop, setListExpandedShop] = useState<string | null>(null)
+
+  // ── Scroll position tracking per view ────────────────────────────────
+  const scrollPositions = useRef<Record<string, number>>({})
+
+  // Continuously save scroll position for the current view
+  useEffect(() => {
+    const handler = () => { scrollPositions.current[view] = window.scrollY }
+    window.addEventListener('scroll', handler, { passive: true })
+    return () => window.removeEventListener('scroll', handler)
+  }, [view])
+
+  // Restore scroll position when view changes
+  const prevViewRef = useRef(view)
+  useEffect(() => {
+    if (prevViewRef.current !== view) {
+      const saved = scrollPositions.current[view] ?? 0
+      requestAnimationFrame(() => window.scrollTo(0, saved))
+      prevViewRef.current = view
+    }
+  }, [view])
+
+  // ── Deep link photo detail ───────────────────────────────────────────
   const deepLinkPhoto = usePhotoDetail(auth.user?.id ?? '')
 
-  // ── Handle deep link URL params on mount ──────────────────────────────
+  // Handle deep link URL params on mount
   useEffect(() => {
     if (deepLinkHandled.current) return
     const params = new URLSearchParams(window.location.search)
     const photoId = params.get('photo')
     const reviewId = params.get('review')
-    // commentId is available for future comment-level highlighting
-    // const commentId = params.get('comment')
 
     if (photoId) {
       deepLinkHandled.current = true
       deepLinkPhoto.open(photoId)
-      // Clean URL without reload
       window.history.replaceState({}, '', window.location.pathname)
     } else if (reviewId) {
       deepLinkHandled.current = true
       setView('list')
-      // Scroll to review after a brief delay for rendering
       requestAnimationFrame(() => {
         const el = document.getElementById(`review-${reviewId}`)
         if (el) {
@@ -53,7 +91,7 @@ export default function Home({ auth, readOnly = false }: HomeProps) {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Handle in-app deep link events (from service worker via useNotifications) ─
+  // Handle in-app deep link events (from service worker via useNotifications)
   useEffect(() => {
     const handler = (e: Event) => {
       const { photoId, reviewId } = (e as CustomEvent).detail
@@ -74,6 +112,10 @@ export default function Home({ auth, readOnly = false }: HomeProps) {
     window.addEventListener('push-deep-link', handler)
     return () => window.removeEventListener('push-deep-link', handler)
   }, [deepLinkPhoto.open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── History-backed modals (browser back closes them) ─────────────────
+  useHistoryModal(showAddModal, () => setShowAddModal(false))
+  useHistoryModal(!!deepLinkPhoto.photo, deepLinkPhoto.close)
 
   const handleViewOnMap = (shopId: string) => {
     setFocusShopId(shopId)
@@ -107,6 +149,12 @@ export default function Home({ auth, readOnly = false }: HomeProps) {
           onUpdate={reviews.updateReview}
           onDelete={reviews.deleteReview}
           onViewOnMap={handleViewOnMap}
+          sortBy={listSort}
+          onSortChange={setListSort}
+          filterReviewer={listFilter}
+          onFilterChange={setListFilter}
+          expandedShop={listExpandedShop}
+          onExpandShop={setListExpandedShop}
         />
       )}
       {view === 'map' && (
