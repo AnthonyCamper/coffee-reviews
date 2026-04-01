@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import StarRating from './ui/StarRating'
+import ExpandableText from './ui/ExpandableText'
 import ReviewEditModal from './ReviewEditModal'
 import ReviewCommentThread from './ReviewCommentThread'
 import ReactionPicker from './gallery/ReactionPicker'
@@ -80,9 +81,7 @@ export default function ReviewCard({
 
         {/* Note */}
         {review.note && (
-          <p className="text-sm text-espresso-600 leading-relaxed mb-1.5 italic">
-            "{review.note}"
-          </p>
+          <ExpandableText text={review.note} className="mb-1.5" />
         )}
 
         {/* Meta */}

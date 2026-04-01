@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import StarRating from '../ui/StarRating'
+import ExpandableText from '../ui/ExpandableText'
 import CommentSection from './CommentSection'
 import HeartIcon from './HeartIcon'
 import GifPicker from './GifPicker'
@@ -174,7 +175,7 @@ export default function PhotoModal({
                 <p className="text-xs font-medium text-espresso-500">☕ {photo.coffee_type}</p>
               )}
               {photo.note && (
-                <p className="text-sm text-espresso-600 leading-relaxed italic">"{photo.note}"</p>
+                <ExpandableText text={photo.note} />
               )}
             </div>
           )}
@@ -374,7 +375,7 @@ export default function PhotoModal({
                 <p className="text-xs font-medium text-espresso-500">☕ {photo.coffee_type}</p>
               )}
               {photo.note && (
-                <p className="text-sm text-espresso-600 leading-relaxed italic break-words">"{photo.note}"</p>
+                <ExpandableText text={photo.note} />
               )}
             </div>
           )}

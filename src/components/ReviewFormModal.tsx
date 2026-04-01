@@ -264,12 +264,15 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
             <textarea
               id="note"
               className="input resize-none"
-              rows={3}
-              maxLength={280}
+              rows={4}
+              maxLength={5000}
               value={note}
               onChange={e => setNote(e.target.value)}
               placeholder="What made it memorable? The flat white, the light, the music…"
             />
+            {note.length > 200 && (
+              <p className="text-xs text-espresso-300 text-right mt-1">{note.length}/5000</p>
+            )}
           </div>
 
           <div>
