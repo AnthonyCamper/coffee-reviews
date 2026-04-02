@@ -217,6 +217,7 @@ export interface ReviewFormData {
   note: string
   visited_at: string
   photos?: File[]
+  place_id?: string // Google Place ID for future deduplication
 }
 
 export interface ReviewUpdateData {

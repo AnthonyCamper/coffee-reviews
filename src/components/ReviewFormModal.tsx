@@ -2,8 +2,11 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import Modal from './ui/Modal'
 import StarRating from './ui/StarRating'
-import BusinessAutocomplete from './ui/BusinessAutocomplete'
+import LocationSearch from './ui/LocationSearch'
+import LocationConfirmation from './ui/LocationConfirmation'
 import PhotoUpload from './ui/PhotoUpload'
+import type { PlaceLocation } from '../lib/location'
+import { geocodeAddress } from '../lib/location'
 import type { ReviewFormData } from '../lib/types'
 
 interface Props {
@@ -15,9 +18,7 @@ const today = new Date().toISOString().split('T')[0]
 
 export default function ReviewFormModal({ onClose, onSubmit }: Props) {
   const [shopName, setShopName] = useState('')
-  const [address, setAddress] = useState('')
-  const [lat, setLat] = useState('')
-  const [lng, setLng] = useState('')
+  const [selectedLocation, setSelectedLocation] = useState<PlaceLocation | null>(null)
   const [coffeeRating, setCoffeeRating] = useState(0)
   const [vibeRating, setVibeRating] = useState(0)
   const [coffeeType, setCoffeeType] = useState('')
@@ -26,47 +27,52 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
   const [photos, setPhotos] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [step, setStep] = useState<1 | 2>(1)
-  const [showManual, setShowManual] = useState(false)
-  const [geoLoading, setGeoLoading] = useState(false)
 
-  const geocodeAddress = async () => {
-    if (!address.trim()) return
-    setGeoLoading(true)
-    try {
-      const encoded = encodeURIComponent(address.trim())
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`
-      )
-      const data = await res.json() as Array<{ lat: string; lon: string }>
-      if (data[0]) {
-        setLat(parseFloat(data[0].lat).toFixed(6))
-        setLng(parseFloat(data[0].lon).toFixed(6))
-        toast.success('Location found!')
-      } else {
-        toast.error('Could not find address — enter coordinates manually.')
-      }
-    } catch {
-      toast.error('Geocoding failed — enter coordinates manually.')
-    } finally {
-      setGeoLoading(false)
-    }
+  // Manual entry fallback
+  const [showManual, setShowManual] = useState(false)
+  const [manualAddress, setManualAddress] = useState('')
+  const [manualGeoLoading, setManualGeoLoading] = useState(false)
+
+  const handleLocationSelect = (place: PlaceLocation) => {
+    setSelectedLocation(place)
+    setShopName(place.name)
+    setShowManual(false)
   }
 
-  const handleAutocompleteSelect = (suggestion: { name: string; address: string; lat: string; lng: string }) => {
-    setShopName(suggestion.name)
-    setAddress(suggestion.address)
-    setLat(parseFloat(suggestion.lat).toFixed(6))
-    setLng(parseFloat(suggestion.lng).toFixed(6))
+  const handleLocationClear = () => {
+    setSelectedLocation(null)
+    setShopName('')
+  }
+
+  const handleManualGeocode = async () => {
+    if (!manualAddress.trim()) return
+    setManualGeoLoading(true)
+    try {
+      const place = await geocodeAddress(manualAddress)
+      if (place) {
+        place.source = 'manual'
+        setSelectedLocation(place)
+        setShopName(prev => prev || place.name)
+        setShowManual(false)
+        toast.success('Location found!')
+      } else {
+        toast.error('Could not find that address. Try a more specific address.')
+      }
+    } catch {
+      toast.error('Geocoding failed. Please try again.')
+    } finally {
+      setManualGeoLoading(false)
+    }
   }
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!shopName.trim() || !address.trim()) {
-      toast.error('Please fill in shop name and address.')
+    if (!shopName.trim()) {
+      toast.error('Please enter a shop name.')
       return
     }
-    if (!lat || !lng) {
-      toast.error('Please add a location — select from suggestions or use Find.')
+    if (!selectedLocation) {
+      toast.error('Please select a location from search or use current location.')
       return
     }
     setStep(2)
@@ -81,9 +87,9 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
     setSubmitting(true)
     const result = await onSubmit({
       shop_name: shopName,
-      address,
-      lat,
-      lng,
+      address: selectedLocation?.address ?? '',
+      lat: selectedLocation?.lat.toFixed(6) ?? '0',
+      lng: selectedLocation?.lng.toFixed(6) ?? '0',
       coffee_rating: coffeeRating,
       vibe_rating: vibeRating,
       coffee_type: coffeeType,
@@ -95,7 +101,7 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
     if (result.error) {
       toast.error(result.error)
     } else {
-      toast.success('Review added! ☕')
+      toast.success('Review added!')
     }
   }
 
@@ -104,105 +110,103 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
       {step === 1 ? (
         <form onSubmit={handleNext} className="px-6 py-5 space-y-4">
           <p className="text-xs text-espresso-400 font-medium uppercase tracking-widest">
-            Step 1 of 2 — Shop details
+            Step 1 of 2 — Find the shop
           </p>
 
-          {/* Autocomplete search */}
+          {/* Location search + confirmation */}
           <div>
-            <label className="label" htmlFor="shop-search">Search Coffee Shop</label>
-            <BusinessAutocomplete
-              id="shop-search"
-              value={shopName}
-              onChange={setShopName}
-              onSelect={handleAutocompleteSelect}
-              placeholder="Proud Mary, Seven Seeds…"
+            <label className="label">Coffee Shop</label>
+            <LocationSearch
+              onSelect={handleLocationSelect}
+              selectedLocation={selectedLocation}
             />
-            {lat && lng && (
-              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                <span>✓</span> Location set
-              </p>
+            {selectedLocation && (
+              <LocationConfirmation
+                location={selectedLocation}
+                onClear={handleLocationClear}
+              />
             )}
           </div>
 
-          {/* Manual fields — collapsed by default if autocomplete filled values */}
-          {!showManual && (lat || address) ? (
-            <div className="bg-cream-50 rounded-2xl px-4 py-3 space-y-0.5">
-              <p className="text-sm font-semibold text-espresso-700">{address}</p>
-              <p className="text-xs text-espresso-400">{lat}, {lng}</p>
-              <button
-                type="button"
-                onClick={() => setShowManual(true)}
-                className="text-xs text-rose-400 hover:text-rose-500 mt-1 transition-colors"
-              >
-                Edit manually
-              </button>
+          {/* Editable shop name (pre-filled from selection, but editable) */}
+          {selectedLocation && (
+            <div>
+              <label className="label" htmlFor="shop-name">Shop Name</label>
+              <input
+                id="shop-name"
+                type="text"
+                className="input"
+                value={shopName}
+                onChange={e => setShopName(e.target.value)}
+                placeholder="Shop name"
+              />
+              <p className="text-[10px] text-espresso-300 mt-1">
+                Edit if the name doesn't look right
+              </p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              <div>
-                <label className="label" htmlFor="address">Address</label>
-                <div className="flex gap-2">
-                  <input
-                    id="address"
-                    type="text"
-                    className="input flex-1"
-                    value={address}
-                    onChange={e => setAddress(e.target.value)}
-                    placeholder="123 Coffee Lane, Melbourne"
-                  />
-                  <button
-                    type="button"
-                    onClick={geocodeAddress}
-                    disabled={geoLoading || !address.trim()}
-                    className="btn-secondary px-3 py-3 text-xs whitespace-nowrap flex-shrink-0"
-                  >
-                    {geoLoading ? '…' : 'Find'}
-                  </button>
-                </div>
-              </div>
+          )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label" htmlFor="lat">Latitude</label>
-                  <input
-                    id="lat"
-                    type="number"
-                    step="any"
-                    className="input"
-                    value={lat}
-                    onChange={e => setLat(e.target.value)}
-                    placeholder="-37.8136"
-                  />
-                </div>
-                <div>
-                  <label className="label" htmlFor="lng">Longitude</label>
-                  <input
-                    id="lng"
-                    type="number"
-                    step="any"
-                    className="input"
-                    value={lng}
-                    onChange={e => setLng(e.target.value)}
-                    placeholder="144.9631"
-                  />
-                </div>
-              </div>
-
-              {(address || lat) && (
+          {/* Manual entry fallback */}
+          {!selectedLocation && (
+            <div className="pt-1">
+              {!showManual ? (
                 <button
                   type="button"
-                  onClick={() => setShowManual(false)}
+                  onClick={() => setShowManual(true)}
                   className="text-xs text-espresso-300 hover:text-espresso-500 transition-colors"
                 >
-                  Collapse
+                  Can't find it? Enter manually
                 </button>
+              ) : (
+                <div className="space-y-3 bg-cream-50 rounded-2xl p-4">
+                  <p className="text-xs text-espresso-400 font-medium">Manual entry</p>
+                  <div>
+                    <label className="label" htmlFor="manual-name">Shop Name</label>
+                    <input
+                      id="manual-name"
+                      type="text"
+                      className="input"
+                      value={shopName}
+                      onChange={e => setShopName(e.target.value)}
+                      placeholder="Proud Mary, Seven Seeds…"
+                    />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="manual-address">Address</label>
+                    <div className="flex gap-2">
+                      <input
+                        id="manual-address"
+                        type="text"
+                        className="input flex-1"
+                        value={manualAddress}
+                        onChange={e => setManualAddress(e.target.value)}
+                        placeholder="123 Coffee Lane, Melbourne"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleManualGeocode}
+                        disabled={manualGeoLoading || !manualAddress.trim()}
+                        className="btn-secondary px-3 py-3 text-xs whitespace-nowrap flex-shrink-0"
+                      >
+                        {manualGeoLoading ? '…' : 'Find'}
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowManual(false)}
+                    className="text-xs text-espresso-300 hover:text-espresso-500 transition-colors"
+                  >
+                    Back to search
+                  </button>
+                </div>
               )}
             </div>
           )}
 
           <div className="pt-1 pb-2">
             <button type="submit" className="btn-primary w-full">
-              Next →
+              Next
             </button>
           </div>
         </form>
@@ -221,9 +225,14 @@ export default function ReviewFormModal({ onClose, onSubmit }: Props) {
             </p>
           </div>
 
+          {/* Selected shop summary */}
           <div className="bg-cream-50 rounded-2xl px-4 py-3">
             <p className="font-semibold text-espresso-700 text-sm">{shopName}</p>
-            <p className="text-xs text-espresso-400 mt-0.5">{address}</p>
+            {selectedLocation && (
+              <p className="text-xs text-espresso-400 mt-0.5 leading-relaxed">
+                {selectedLocation.address}
+              </p>
+            )}
           </div>
 
           <div>

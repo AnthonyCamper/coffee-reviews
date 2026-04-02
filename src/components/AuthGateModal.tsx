@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useBottomSheetDrag } from '../hooks/useBottomSheetDrag'
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ function AuthGateModal({
   onSignInGoogle?: () => Promise<void>
 }) {
   const navigate = useNavigate()
+  const { expanded, handleProps, sheetStyle } = useBottomSheetDrag()
 
   return (
     <div
@@ -66,18 +68,28 @@ function AuthGateModal({
       {/* Sheet */}
       <div
         className="relative w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl
-                   shadow-2xl animate-slide-up overflow-hidden"
+                   shadow-2xl animate-slide-up overflow-hidden flex flex-col"
+        style={sheetStyle}
         onClick={e => e.stopPropagation()}
       >
         {/* Drag handle (mobile) */}
-        <div className="sm:hidden flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-cream-200" />
+        <div
+          className="sm:hidden flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none select-none flex-shrink-0"
+          role="slider"
+          aria-label={expanded ? 'Drag down to collapse' : 'Drag up to expand'}
+          aria-valuemin={0}
+          aria-valuemax={1}
+          aria-valuenow={expanded ? 1 : 0}
+          tabIndex={0}
+          {...handleProps}
+        >
+          <div className={`w-10 h-1 rounded-full transition-colors duration-200 ${expanded ? 'bg-cream-300' : 'bg-cream-200'}`} />
         </div>
 
         {/* Decorative gradient accent */}
         <div className="absolute top-0 left-0 right-0 h-36 bg-gradient-to-b from-rose-50/80 to-transparent pointer-events-none" />
 
-        <div className="relative px-8 pt-6 flex flex-col items-center text-center pb-safe-8 sm:pb-8">
+        <div className="relative px-8 pt-6 flex flex-col items-center text-center pb-safe-8 sm:pb-8 overflow-y-auto flex-1">
           {/* Icon */}
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-100 to-cream-200 flex items-center justify-center mb-5 shadow-soft">
             <span className="text-2xl" role="img" aria-label="coffee">☕</span>
