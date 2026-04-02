@@ -1,4 +1,5 @@
 import { useEffect, ReactNode } from 'react'
+import { useBottomSheetDrag } from '../../hooks/useBottomSheetDrag'
 
 interface Props {
   title: string
@@ -8,6 +9,8 @@ interface Props {
 }
 
 export default function Modal({ title, onClose, children, size = 'md' }: Props) {
+  const { expanded, handleProps, sheetStyle } = useBottomSheetDrag()
+
   // Lock body scroll while modal is open (prevents double-scroll on iOS)
   // Saves and restores scroll position to prevent the jump caused by position:fixed
   useEffect(() => {
@@ -44,11 +47,20 @@ export default function Modal({ title, onClose, children, size = 'md' }: Props) 
       {/* Sheet — slides up from bottom on mobile, centered on desktop */}
       <div
         className={`relative w-full ${maxWidths[size]} bg-white rounded-t-3xl sm:rounded-3xl shadow-elevated animate-slide-up flex flex-col`}
-        style={{ maxHeight: 'calc(90dvh - env(safe-area-inset-top))' }}
+        style={sheetStyle}
       >
-        {/* Drag handle (mobile only) */}
-        <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
-          <div className="w-10 h-1 rounded-full bg-cream-200" />
+        {/* Drag handle (mobile only) — swipe up to expand, down to collapse */}
+        <div
+          className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0 cursor-grab active:cursor-grabbing touch-none select-none"
+          role="slider"
+          aria-label={expanded ? 'Drag down to collapse' : 'Drag up to expand'}
+          aria-valuemin={0}
+          aria-valuemax={1}
+          aria-valuenow={expanded ? 1 : 0}
+          tabIndex={0}
+          {...handleProps}
+        >
+          <div className={`w-10 h-1 rounded-full transition-colors duration-200 ${expanded ? 'bg-cream-300' : 'bg-cream-200'}`} />
         </div>
 
         {/* Header */}

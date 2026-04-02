@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useBottomSheetDrag } from '../../hooks/useBottomSheetDrag'
 
 // ── Emoji data: compact curated set organized by category ──────────────────
 
@@ -40,7 +41,7 @@ const CATEGORIES = [
     label: 'Hearts',
     icon: '❤️',
     emojis: [
-      '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💖',
+      '❤️','��','💛','💚','💙','💜','🖤','🤍','🤎','💖',
       '💝','💘','💕','💞','💓','💗','💔','❤️‍🔥','❤️‍🩹','🩷',
       '🩵','🩶',
     ],
@@ -129,6 +130,11 @@ export default function EmojiPicker({ onSelect, onClose, anchorRect }: EmojiPick
   const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 640
 
+  const { expanded, handleProps, sheetStyle } = useBottomSheetDrag({
+    defaultMaxHeight: 'calc(55dvh - env(safe-area-inset-top))',
+    expandedMaxHeight: 'calc(100dvh - env(safe-area-inset-top))',
+  })
+
   // Build categories with recent
   const recent = getRecentEmojis()
   const categories = CATEGORIES.map(cat =>
@@ -198,14 +204,23 @@ export default function EmojiPicker({ onSelect, onClose, anchorRect }: EmojiPick
               top: Math.min(anchorRect.top, window.innerHeight - 400),
               left: Math.min(anchorRect.right + 8, window.innerWidth - 356),
             }
-          : undefined
+          : sheetStyle
       }
       onClick={e => e.stopPropagation()}
     >
       {/* Handle (mobile only) */}
       {!isDesktop && (
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-          <div className="w-10 h-1 rounded-full bg-cream-200" />
+        <div
+          className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none select-none"
+          role="slider"
+          aria-label={expanded ? 'Drag down to collapse' : 'Drag up to expand'}
+          aria-valuemin={0}
+          aria-valuemax={1}
+          aria-valuenow={expanded ? 1 : 0}
+          tabIndex={0}
+          {...handleProps}
+        >
+          <div className={`w-10 h-1 rounded-full transition-colors duration-200 ${expanded ? 'bg-cream-300' : 'bg-cream-200'}`} />
         </div>
       )}
 
@@ -232,7 +247,7 @@ export default function EmojiPicker({ onSelect, onClose, anchorRect }: EmojiPick
         ref={scrollRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-2 pb-3 min-h-0"
-        style={{ maxHeight: isDesktop ? '280px' : '50dvh' }}
+        style={{ maxHeight: isDesktop ? '280px' : undefined }}
       >
         {categories.map(cat => (
           <div
