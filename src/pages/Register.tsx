@@ -25,8 +25,8 @@ export default function Register({ onSignUp }: Props) {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Photo must be under 5 MB')
+    if (file.size > 50 * 1024 * 1024) {
+      setError('Photo must be under 50 MB')
       return
     }
     setAvatar(file)

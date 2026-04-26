@@ -32,8 +32,8 @@ export default function ProfileModal({ auth, onClose }: Props) {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Photo must be under 5 MB')
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Photo must be under 50 MB')
       return
     }
     setAvatarFile(file)
