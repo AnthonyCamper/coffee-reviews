@@ -115,6 +115,33 @@ export interface GalleryPhoto {
   is_liked_by_me: boolean
 }
 
+/** A review-level gallery item grouping all photos belonging to one review. */
+export interface GalleryReviewItem {
+  review_id: string
+  coffee_rating: number
+  vibe_rating: number
+  coffee_type: string | null
+  note: string | null
+  visited_at: string
+  shop_id: string
+  shop_name: string
+  shop_address: string
+  reviewer_id: string
+  reviewer_name: string | null
+  reviewer_avatar: string | null
+  reviewer_email: string | null
+  like_count: number
+  comment_count: number
+  is_liked_by_me: boolean
+  /** All photos attached to this review, ordered by display_order. */
+  photos: Array<{
+    photo_id: string
+    photo_url: string
+    display_order: number
+    photo_created_at: string
+  }>
+}
+
 export interface CommentReaction {
   reaction_type: string
   count: number
