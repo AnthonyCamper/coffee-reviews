@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { triggerPushDelivery } from '../lib/pushManager'
-import type { GalleryPhoto, GalleryReviewItem } from '../lib/types'
+import type { GalleryPhoto, GalleryReviewItem, GalleryShopItem } from '../lib/types'
 
 const PAGE_SIZE = 21 // 3-column multiples look clean
 
@@ -58,8 +58,57 @@ export function groupByReview(photos: GalleryPhoto[]): GalleryReviewItem[] {
   return Array.from(map.values())
 }
 
+/**
+ * Group review-level items by shop. Each shop item holds every review for that
+ * shop and a flat list of every photo across those reviews (newest first).
+ * Shops appear in the order their first review shows up in the feed.
+ */
+export function groupByShop(reviews: GalleryReviewItem[]): GalleryShopItem[] {
+  const map = new Map<string, GalleryShopItem>()
+
+  for (const r of reviews) {
+    let item = map.get(r.shop_id)
+    if (!item) {
+      item = {
+        shop_id: r.shop_id,
+        shop_name: r.shop_name,
+        shop_address: r.shop_address,
+        reviews: [],
+        photos: [],
+        photo_count: 0,
+        review_count: 0,
+        latest_visited_at: r.visited_at,
+      }
+      map.set(r.shop_id, item)
+    }
+    item.reviews.push(r)
+    for (const p of r.photos) {
+      item.photos.push({
+        photo_id: p.photo_id,
+        photo_url: p.photo_url,
+        review_id: r.review_id,
+        display_order: p.display_order,
+        photo_created_at: p.photo_created_at,
+      })
+    }
+    if (r.visited_at > item.latest_visited_at) {
+      item.latest_visited_at = r.visited_at
+    }
+  }
+
+  for (const item of map.values()) {
+    item.photos.sort((a, b) => b.photo_created_at.localeCompare(a.photo_created_at))
+    item.reviews.sort((a, b) => b.visited_at.localeCompare(a.visited_at))
+    item.photo_count = item.photos.length
+    item.review_count = item.reviews.length
+  }
+
+  return Array.from(map.values())
+}
+
 interface UseGalleryReturn {
   reviews: GalleryReviewItem[]
+  shops: GalleryShopItem[]
   /** @deprecated Use reviews instead */
   photos: GalleryPhoto[]
   loading: boolean
@@ -175,9 +224,11 @@ export function useGallery(currentUserId: string): UseGalleryReturn {
   }, [photos, refreshReview])
 
   const reviews = groupByReview(photos)
+  const shops = groupByShop(reviews)
 
   return {
     reviews,
+    shops,
     photos,
     loading,
     loadingMore,
