@@ -142,6 +142,27 @@ export interface GalleryReviewItem {
   }>
 }
 
+/** A shop-level gallery item grouping every review (and all photos) for one shop. */
+export interface GalleryShopItem {
+  shop_id: string
+  shop_name: string
+  shop_address: string
+  /** All reviews of this shop, newest first (by visited_at). */
+  reviews: GalleryReviewItem[]
+  /** Flat list of every photo across every review of this shop, newest first. */
+  photos: Array<{
+    photo_id: string
+    photo_url: string
+    review_id: string
+    display_order: number
+    photo_created_at: string
+  }>
+  photo_count: number
+  review_count: number
+  /** Newest visited_at across this shop's reviews — used for sorting in the feed. */
+  latest_visited_at: string
+}
+
 export interface CommentReaction {
   reaction_type: string
   count: number

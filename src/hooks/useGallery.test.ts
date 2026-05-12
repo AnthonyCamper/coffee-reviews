@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { groupByReview } from './useGallery'
+import { groupByReview, groupByShop } from './useGallery'
 import type { GalleryPhoto } from '../lib/types'
 
 function makePhoto(overrides: Partial<GalleryPhoto> = {}): GalleryPhoto {
@@ -207,5 +207,117 @@ describe('groupByReview', () => {
     expect(result[1].photos).toHaveLength(2)
     expect(result[2].review_id).toBe('r3')
     expect(result[2].photos).toHaveLength(1)
+  })
+})
+
+describe('groupByShop', () => {
+  it('groups reviews from the same shop into one item', () => {
+    const reviews = groupByReview([
+      makePhoto({ photo_id: 'p1', review_id: 'r1', shop_id: 's1', visited_at: '2025-01-01' }),
+      makePhoto({ photo_id: 'p2', review_id: 'r2', shop_id: 's1', visited_at: '2025-01-02' }),
+    ])
+
+    const result = groupByShop(reviews)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].shop_id).toBe('s1')
+    expect(result[0].reviews).toHaveLength(2)
+    expect(result[0].photos).toHaveLength(2)
+    expect(result[0].review_count).toBe(2)
+    expect(result[0].photo_count).toBe(2)
+  })
+
+  it('returns separate items for different shops', () => {
+    const reviews = groupByReview([
+      makePhoto({ photo_id: 'p1', review_id: 'r1', shop_id: 's1' }),
+      makePhoto({ photo_id: 'p2', review_id: 'r2', shop_id: 's2', shop_name: 'Cafe B' }),
+    ])
+
+    const result = groupByShop(reviews)
+
+    expect(result).toHaveLength(2)
+    expect(result.map(s => s.shop_id).sort()).toEqual(['s1', 's2'])
+  })
+
+  it('flattens photos across all reviews of a shop', () => {
+    const reviews = groupByReview([
+      makePhoto({ photo_id: 'p1', display_order: 0, review_id: 'r1', shop_id: 's1' }),
+      makePhoto({ photo_id: 'p2', display_order: 1, review_id: 'r1', shop_id: 's1' }),
+      makePhoto({ photo_id: 'p3', display_order: 0, review_id: 'r2', shop_id: 's1' }),
+    ])
+
+    const result = groupByShop(reviews)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].photos).toHaveLength(3)
+    expect(result[0].photos.every(p => p.review_id === 'r1' || p.review_id === 'r2')).toBe(true)
+  })
+
+  it('sorts shop photos by photo_created_at newest first', () => {
+    const reviews = groupByReview([
+      makePhoto({ photo_id: 'p1', review_id: 'r1', shop_id: 's1', photo_created_at: '2025-01-01T00:00:00Z' }),
+      makePhoto({ photo_id: 'p2', review_id: 'r2', shop_id: 's1', photo_created_at: '2025-01-03T00:00:00Z' }),
+      makePhoto({ photo_id: 'p3', review_id: 'r3', shop_id: 's1', photo_created_at: '2025-01-02T00:00:00Z' }),
+    ])
+
+    const result = groupByShop(reviews)
+
+    expect(result[0].photos.map(p => p.photo_id)).toEqual(['p2', 'p3', 'p1'])
+  })
+
+  it('sorts reviews within a shop by visited_at newest first', () => {
+    const reviews = groupByReview([
+      makePhoto({ photo_id: 'p1', review_id: 'r1', shop_id: 's1', visited_at: '2025-01-01' }),
+      makePhoto({ photo_id: 'p2', review_id: 'r2', shop_id: 's1', visited_at: '2025-01-03' }),
+      makePhoto({ photo_id: 'p3', review_id: 'r3', shop_id: 's1', visited_at: '2025-01-02' }),
+    ])
+
+    const result = groupByShop(reviews)
+
+    expect(result[0].reviews.map(r => r.review_id)).toEqual(['r2', 'r3', 'r1'])
+  })
+
+  it('tracks latest_visited_at across reviews', () => {
+    const reviews = groupByReview([
+      makePhoto({ review_id: 'r1', shop_id: 's1', visited_at: '2025-01-01' }),
+      makePhoto({ review_id: 'r2', shop_id: 's1', visited_at: '2025-03-15' }),
+      makePhoto({ review_id: 'r3', shop_id: 's1', visited_at: '2025-02-10' }),
+    ])
+
+    const result = groupByShop(reviews)
+
+    expect(result[0].latest_visited_at).toBe('2025-03-15')
+  })
+
+  it('preserves insertion order of shops based on feed chronology', () => {
+    const reviews = groupByReview([
+      makePhoto({ review_id: 'r1', shop_id: 's2' }),
+      makePhoto({ review_id: 'r2', shop_id: 's1' }),
+      makePhoto({ review_id: 'r3', shop_id: 's3' }),
+    ])
+
+    const result = groupByShop(reviews)
+
+    expect(result.map(s => s.shop_id)).toEqual(['s2', 's1', 's3'])
+  })
+
+  it('returns empty array for empty input', () => {
+    expect(groupByShop([])).toEqual([])
+  })
+
+  it('carries over shop metadata correctly', () => {
+    const reviews = groupByReview([
+      makePhoto({
+        review_id: 'r1',
+        shop_id: 's1',
+        shop_name: 'Best Cafe',
+        shop_address: '123 Main St',
+      }),
+    ])
+
+    const result = groupByShop(reviews)
+
+    expect(result[0].shop_name).toBe('Best Cafe')
+    expect(result[0].shop_address).toBe('123 Main St')
   })
 })
