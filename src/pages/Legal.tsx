@@ -1,12 +1,19 @@
 import { Link } from 'react-router-dom'
 
-const SUPPORT_EMAIL = 'admin@taliascoffee.com'
+// Purpose-specific inboxes (all forward to the same mailbox via Cloudflare
+// Email Routing catch-all, but read clearly to users).
+const EMAIL = {
+  support: 'support@taliascoffee.com',
+  privacy: 'privacy@taliascoffee.com',
+  safety: 'safety@taliascoffee.com',
+  dmca: 'dmca@taliascoffee.com',
+}
 const LAST_UPDATED = 'June 19, 2026'
 const MIN_AGE = 13
 
 type LegalDoc = 'privacy' | 'terms' | 'guidelines' | 'dmca'
 
-function Shell({ title, children }: { title: string; children: React.ReactNode }) {
+function Shell({ title, contact = EMAIL.support, children }: { title: string; contact?: string; children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-cream-50">
       <header className="border-b border-cream-200 bg-white/80 backdrop-blur sticky top-0 z-10">
@@ -24,7 +31,7 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
           {children}
         </div>
         <footer className="mt-12 pt-6 border-t border-cream-200 text-xs text-espresso-400">
-          Questions? Contact <a className="text-rose-500" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+          Questions? Contact <a className="text-rose-500" href={`mailto:${contact}`}>{contact}</a>.
           <div className="mt-3 flex flex-wrap gap-4">
             <Link className="text-rose-500" to="/privacy">Privacy</Link>
             <Link className="text-rose-500" to="/terms">Terms</Link>
@@ -43,10 +50,10 @@ function H2({ children }: { children: React.ReactNode }) {
 
 function PrivacyPolicy() {
   return (
-    <Shell title="Privacy Policy">
+    <Shell title="Privacy Policy" contact={EMAIL.privacy}>
       <p>
         This Privacy Policy explains what Talia&rsquo;s Coffee (&ldquo;we&rdquo;, &ldquo;us&rdquo;)
-        collects and how we use it. Contact: <a className="text-rose-500" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+        collects and how we use it. Privacy questions and data requests: <a className="text-rose-500" href={`mailto:${EMAIL.privacy}`}>{EMAIL.privacy}</a>.
       </p>
 
       <H2>Information we collect</H2>
@@ -74,7 +81,7 @@ function PrivacyPolicy() {
       <p>We keep your data while your account is active. You can delete your account at any time from inside the app, which permanently removes your profile, content, photos, comments, likes, follows, and messages, except where we must retain limited records for legal reasons.</p>
 
       <H2>Your rights</H2>
-      <p>Depending on where you live, you may access, correct, delete, export, or object to processing of your data, and opt out of &ldquo;sale/sharing&rdquo; (we do not sell or share). Use in-app account deletion or contact {SUPPORT_EMAIL}. California residents: we do not sell or share personal information under the CCPA/CPRA.</p>
+      <p>Depending on where you live, you may access, correct, delete, export, or object to processing of your data, and opt out of &ldquo;sale/sharing&rdquo; (we do not sell or share). Use in-app account deletion or contact {EMAIL.privacy}. California residents: we do not sell or share personal information under the CCPA/CPRA.</p>
 
       <H2>Direct messages</H2>
       <p>Messages are transmitted over encrypted connections (TLS) and stored by our hosting provider. They are not end-to-end encrypted. We may access message content where necessary to respond to a report or comply with law.</p>
@@ -126,13 +133,16 @@ function Terms() {
 
       <H2>Changes</H2>
       <p>We may update these Terms; continued use after changes means you accept them.</p>
+
+      <H2>Contact</H2>
+      <p>Questions about these Terms? Email <a className="text-rose-500" href={`mailto:${EMAIL.support}`}>{EMAIL.support}</a>.</p>
     </Shell>
   )
 }
 
 function Guidelines() {
   return (
-    <Shell title="Community Guidelines">
+    <Shell title="Community Guidelines" contact={EMAIL.safety}>
       <p>Talia&rsquo;s Coffee is a place to share honest coffee experiences. Keep it friendly.</p>
       <H2>Encouraged</H2>
       <ul className="list-disc pl-5 space-y-1">
@@ -151,19 +161,20 @@ function Guidelines() {
       </ul>
       <H2>Reporting and blocking</H2>
       <p>Use the &bull;&bull;&bull; menu on a post, comment, profile, or conversation to <strong>Report</strong>, or <strong>block</strong> any user to hide their content and stop them messaging you. We review reports and act on them, typically within 24 hours. Violations can result in content removal and account suspension or termination.</p>
+      <p>To report something urgent or appeal a moderation decision, email our safety team at <a className="text-rose-500" href={`mailto:${EMAIL.safety}`}>{EMAIL.safety}</a>.</p>
     </Shell>
   )
 }
 
 function Dmca() {
   return (
-    <Shell title="DMCA / Copyright Policy">
+    <Shell title="DMCA / Copyright Policy" contact={EMAIL.dmca}>
       <p>We respect intellectual property rights and respond to notices of alleged infringement that comply with the Digital Millennium Copyright Act (DMCA).</p>
       <H2>Reporting an infringement</H2>
       <p>Send a written notice to our designated agent that includes: your signature; identification of the copyrighted work; identification of the allegedly infringing material and where to find it; your contact information; a good-faith-belief statement; and a statement, under penalty of perjury, that your notice is accurate and you are authorized to act.</p>
       <p>
-        <strong>Designated agent:</strong> Talia&rsquo;s Coffee<br />
-        <strong>Email:</strong> <a className="text-rose-500" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+        <strong>Designated agent:</strong> Copyright Agent, Talia&rsquo;s Coffee<br />
+        <strong>Email:</strong> <a className="text-rose-500" href={`mailto:${EMAIL.dmca}`}>{EMAIL.dmca}</a>
       </p>
       <H2>Counter-notice</H2>
       <p>If your content was removed and you believe it was a mistake, you may send a counter-notice with the equivalent information.</p>
