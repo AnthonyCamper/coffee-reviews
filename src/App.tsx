@@ -6,6 +6,7 @@ import Home from './pages/Home'
 import Register from './pages/Register'
 import PendingApproval from './pages/PendingApproval'
 import AdminDashboard from './pages/AdminDashboard'
+import Legal from './pages/Legal'
 
 function StatusScreen({ title, message, onSignOut }: { title: string; message: string; onSignOut: () => void }) {
   return (
@@ -66,6 +67,12 @@ export default function App() {
       />
 
       <Routes>
+        {/* Public legal pages — readable without an account (App Store / GDPR / DSA). */}
+        <Route path="/privacy" element={<Legal doc="privacy" />} />
+        <Route path="/terms" element={<Legal doc="terms" />} />
+        <Route path="/guidelines" element={<Legal doc="guidelines" />} />
+        <Route path="/dmca" element={<Legal doc="dmca" />} />
+
         <Route path="/login" element={
           auth.status === 'unauthenticated' ? (
             <Login
