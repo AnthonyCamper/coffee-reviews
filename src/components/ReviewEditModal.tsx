@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Modal from './ui/Modal'
-import StarRating from './ui/StarRating'
+import RatingPicker from './ui/RatingPicker'
 import PhotoUpload from './ui/PhotoUpload'
 import type { Review, ReviewPhoto, ReviewUpdateData } from '../lib/types'
 
@@ -50,25 +50,21 @@ export default function ReviewEditModal({ review, onClose, onSubmit }: Props) {
   return (
     <Modal title="Edit Review" onClose={onClose} size="md">
       <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
-        <div>
-          <label className="label">Coffee Rating</label>
-          <div className="flex items-center gap-3">
-            <StarRating value={coffeeRating} interactive onChange={setCoffeeRating} size="lg" />
-            {coffeeRating > 0 && (
-              <span className="text-sm text-espresso-500 font-medium">{coffeeRating}/10</span>
-            )}
-          </div>
-        </div>
+        <RatingPicker
+          value={coffeeRating}
+          onChange={setCoffeeRating}
+          accent="rose"
+          icon="☕"
+          label="Coffee"
+        />
 
-        <div>
-          <label className="label">Vibe Rating</label>
-          <div className="flex items-center gap-3">
-            <StarRating value={vibeRating} interactive onChange={setVibeRating} size="lg" />
-            {vibeRating > 0 && (
-              <span className="text-sm text-espresso-500 font-medium">{vibeRating}/10</span>
-            )}
-          </div>
-        </div>
+        <RatingPicker
+          value={vibeRating}
+          onChange={setVibeRating}
+          accent="rose"
+          icon="✨"
+          label="Vibe"
+        />
 
         <div>
           <label className="label" htmlFor="edit-coffee-type">What did you order? (optional)</label>

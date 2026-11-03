@@ -65,10 +65,10 @@ export default function ReviewCard({
         {/* Ratings row */}
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
           <span className="rating-coffee">
-            ☕ <StarRating value={review.coffee_rating} size="sm" /> {review.coffee_rating}
+            ☕ <StarRating value={review.coffee_rating} size="sm" /> {review.coffee_rating.toFixed(1)}
           </span>
           <span className="rating-vibe">
-            ✨ <StarRating value={review.vibe_rating} size="sm" /> {review.vibe_rating}
+            ✨ <StarRating value={review.vibe_rating} size="sm" /> {review.vibe_rating.toFixed(1)}
           </span>
         </div>
 

@@ -21,3 +21,6 @@ Thumbs.db
 
 # Logs
 npm-debug.log*
+node_modules
+.env*.local
+supabase/.temp/
